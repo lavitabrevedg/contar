@@ -17,6 +17,24 @@ Unity **6000.3.12f1 (LTS)** — ensure this exact version is installed before op
 3. Open `Assets/Scenes/SampleScene.unity`
 4. Press **Play** to run in the editor, or use **File → Build Settings → Build And Run** for a standalone build (default: 1920×1080 fullscreen)
 
+## Game Concept
+
+**장르**: 이동 횟수 기반 탈출 퍼즐 (2D)
+**모티브**: [헬테이커(Helltaker)](https://store.steampowered.com/app/1289310/Helltaker/) — 격자 이동, 제한된 이동 횟수, 장애물 밀기 메커닉 참고
+
+### 기본 룰
+- 시작점과 출구가 존재하며, 플레이어는 이동할수록 보유 숫자가 줄어든다.
+- 출구는 기본적으로 진입 가능하나, 특정 맵에서는 홀수/짝수일 때만 탈출 가능.
+- **+타일**: 밟으면 숫자 증가 / **-타일**: 밟으면 숫자 감소
+- **숫자 장애물**: 이동 횟수를 소모해 밀 수 있는 오브젝트
+
+### 광고 전략
+- 스킵권: 초기 지급 3장, 최대 5장 보유 가능
+- 0~5스테이지: 광고 없음
+- 3회 스테이지 클리어 시 스킵권 1장 증정
+- 3회 실패 또는 스테이지 다시하기 시 광고 노출
+- 광고 시청 또는 스킵권 사용으로 광고 스킵 가능
+
 ## Architecture
 
 - **Renderer**: Universal Render Pipeline (URP) v17.3 with a 2D-specific renderer (`Assets/Settings/Renderer2D.asset`). The global URP config is at `Assets/Settings/UniversalRP.asset`.
@@ -39,6 +57,10 @@ Unity **6000.3.12f1 (LTS)** — ensure this exact version is installed before op
 | Timeline / cutscenes | `com.unity.timeline` v1.8.11 |
 | Testing | `com.unity.test-framework` v1.6.0 (not yet configured) |
 | Visual Scripting | `com.unity.visualscripting` v1.9.11 |
+
+## Coding Rules
+
+- `_` discard 패턴 사용 금지 (예: `_ => null`, `var _ = ...` 형태 모두 금지)
 
 ## Asset Discipline
 

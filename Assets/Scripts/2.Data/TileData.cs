@@ -15,10 +15,16 @@ public enum ExitCondition
     EvenOnly
 }
 
-//[System.Serializable]
+[System.Serializable]
 public struct SerializedTile
 {
     public TileType type;
     public int value;
     public ExitCondition exitCondition;
+}
+
+[System.Serializable]
+public class Wrapper<T>
+{
+    public T[] values;
 }

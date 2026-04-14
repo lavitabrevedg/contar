@@ -6,7 +6,23 @@ public class MapData : ScriptableObject
     public int width;
     public int height;
     public int startMoveCount;
-    public SerializedTile[] tiles;  // 길이 = width * height
+    public Wrapper<SerializedTile>[] rows; // rows[y].values[x]
+
+    private void Awake()
+    {
+        if (rows == null)
+            ResetGrid();
+    }
+
+    public void ResetGrid()
+    {
+        rows = new Wrapper<SerializedTile>[height];
+        for (int y = 0; y < height; y++)
+        {
+            rows[y] = new Wrapper<SerializedTile>();
+            rows[y].values = new SerializedTile[width];
+        }
+    }
 }
 
 public class MapGenerator : MonoBehaviour
@@ -27,6 +43,11 @@ public class MapGenerator : MonoBehaviour
 
     private BaseTile[,] _grid;
 
+    private void Start()
+    {
+        GenerateMap();
+    }
+
     public void GenerateMap()
     {
         ClearMap();
@@ -41,12 +62,11 @@ public class MapGenerator : MonoBehaviour
 
         for (int y = 0; y < mapData.height; y++)
         {
+            if (mapData.rows[y] == null || mapData.rows[y].values == null) continue;
+
             for (int x = 0; x < mapData.width; x++)
             {
-                int index = y * mapData.width + x;
-                if (index >= mapData.tiles.Length) break;
-
-                SerializedTile tileData = mapData.tiles[index];
+                SerializedTile tileData = mapData.rows[y].values[x];
                 GameObject prefab = GetPrefab(tileData.type);
                 if (prefab == null) continue;
 
@@ -79,15 +99,15 @@ public class MapGenerator : MonoBehaviour
 
     private GameObject GetPrefab(TileType type)
     {
-        return type switch
+        switch (type)
         {
-            TileType.Empty          => emptyPrefab,
-            TileType.Start          => startPrefab,
-            TileType.Exit           => exitPrefab,
-            TileType.Move           => movePrefab,
-            TileType.NumberObstacle => numberObstaclePrefab,
-            TileType.Wall           => wallPrefab,
-            _                       => null
-        };
+            case TileType.Empty:          return emptyPrefab;
+            case TileType.Start:          return startPrefab;
+            case TileType.Exit:           return exitPrefab;
+            case TileType.Move:           return movePrefab;
+            case TileType.NumberObstacle: return numberObstaclePrefab;
+            case TileType.Wall:           return wallPrefab;
+            default:                      return null;
+        }
     }
 }

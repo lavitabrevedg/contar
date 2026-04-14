@@ -427,13 +427,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b80240412c563a142b689c2fa72ff810, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapGenerator
-  mapData: {fileID: 0}
-  emptyPrefab: {fileID: 0}
-  startPrefab: {fileID: 0}
-  exitPrefab: {fileID: 0}
-  movePrefab: {fileID: 0}
-  numberObstaclePrefab: {fileID: 0}
-  wallPrefab: {fileID: 0}
+  mapData: {fileID: 11400000, guid: 96e69ac8a9733ea4a99309b2c42d8de8, type: 2}
+  emptyPrefab: {fileID: 4917229468523656600, guid: f4e971a4d3548e54c9818e9b1cc2d39e, type: 3}
+  startPrefab: {fileID: 6158734540830819438, guid: 2603ed5d80f043341b441c9599191023, type: 3}
+  exitPrefab: {fileID: 7019673698266267946, guid: 9824d23ceeabbb94fb795578c01dd610, type: 3}
+  movePrefab: {fileID: 1521001151046070909, guid: be73d82a4a4ba68469c6bb999b549817, type: 3}
+  numberObstaclePrefab: {fileID: 5944678940478199294, guid: f27032f902995c7408e2263b430a9d9d, type: 3}
+  wallPrefab: {fileID: 4688326346076297061, guid: 4bbc0b8826ac9ad44a9ceb6b6bf622f8, type: 3}
   tileSize: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
