@@ -50,7 +50,7 @@ public class MapEditor : Editor
                 bool isSelected = _selectedX == x && _selectedY == y;
 
                 Color prev = GUI.backgroundColor;
-                GUI.backgroundColor = isSelected ? Color.white : GetTileColor(tile.type);
+                GUI.backgroundColor = isSelected ? Color.magenta : GetTileColor(tile.type);
 
                 if (GUILayout.Button(GetTileLabel(tile.type), GUILayout.Width(50), GUILayout.Height(50)))
                 {

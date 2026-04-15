@@ -44,8 +44,6 @@ public class MapGenerator : MonoBehaviour
 
     private BaseTile[,] _grid;
 
-    [SerializeField] private Vector2 tileOffset;
-
     private void Start()
     {
         GenerateMap();
@@ -73,7 +71,7 @@ public class MapGenerator : MonoBehaviour
                 GameObject prefab = GetPrefab(tileData.type);
                 if (prefab == null) continue;
 
-                Vector3 pos = new Vector3(x * tileSize + tileOffset.x, y * tileSize + tileOffset.y, 0f);
+                Vector3 pos = GridToWorld(x, y);
                 GameObject go = Instantiate(prefab, pos, Quaternion.identity, transform);
                 go.name = $"Tile_{x}_{y}_{tileData.type}";
 
@@ -83,7 +81,7 @@ public class MapGenerator : MonoBehaviour
 
                 if(tileData.type == TileType.Start)
                 {
-                    CreatePlayer(pos,x,y);
+                    CreatePlayer(x, y);
                 }
             }
         }
@@ -95,6 +93,18 @@ public class MapGenerator : MonoBehaviour
             DestroyImmediate(transform.GetChild(i).gameObject);
 
         _grid = null;
+    }
+
+    public Vector3 GridToWorld(int x, int y)
+    {
+        return new Vector3(x * tileSize , y * tileSize , 0f);
+    }
+
+    public Vector2Int WorldToGrid(Vector3 worldPos)
+    {
+        int x = Mathf.RoundToInt(worldPos.x / tileSize);
+        int y = Mathf.RoundToInt(worldPos.y / tileSize);
+        return new Vector2Int(x, y);
     }
 
     public BaseTile GetTile(int x, int y)
@@ -118,8 +128,17 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    private void CreatePlayer(Vector3 pos, int gridX, int gridY)
+    private void CreatePlayer(int gridX, int gridY)
     {
-        
+        if (PlayerPrefab == null) return;
+        if (GameManager.Instance == null) return;
+
+        Vector3 spawnPos = GridToWorld(gridX, gridY);
+        GameObject playerGO = Instantiate(PlayerPrefab, spawnPos, Quaternion.identity, transform);
+
+        PlayerController controller = playerGO.GetComponent<PlayerController>();
+        if (controller == null) return;
+
+        GameManager.Instance.RegisterPlayer(controller, new Vector2Int(gridX, gridY));
     }
 }
