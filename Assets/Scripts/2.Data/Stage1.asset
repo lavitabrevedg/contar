@@ -58,7 +58,7 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 0
+    - type: 2
       value: 0
       exitCondition: 0
     - type: 0

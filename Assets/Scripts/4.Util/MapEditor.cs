@@ -17,9 +17,6 @@ public class MapEditor : Editor
         map.height = EditorGUILayout.IntField("Height", map.height);
         map.startMoveCount = EditorGUILayout.IntField("StartMoveCount", map.startMoveCount);
 
-        if (EditorGUI.EndChangeCheck())
-            EditorUtility.SetDirty(map);
-
         EditorGUILayout.Space();
 
         if (GUILayout.Button("Apply Grid Size"))
@@ -28,6 +25,7 @@ public class MapEditor : Editor
             _selectedX = -1;
             _selectedY = -1;
             EditorUtility.SetDirty(map);
+            AssetDatabase.SaveAssetIfDirty(map);
         }
 
         EditorGUILayout.Space();
@@ -58,10 +56,10 @@ public class MapEditor : Editor
                 {
                     if (isSelected)
                     {
-                        // 이미 선택된 타일 클릭 시 타입 순환
                         tile.type = (TileType)(((int)tile.type + 1) % System.Enum.GetValues(typeof(TileType)).Length);
                         map.rows[y].values[x] = tile;
                         EditorUtility.SetDirty(map);
+                        AssetDatabase.SaveAssetIfDirty(map);
                     }
                     else
                     {
@@ -100,6 +98,7 @@ public class MapEditor : Editor
         {
             map.rows[_selectedY].values[_selectedX] = tile;
             EditorUtility.SetDirty(map);
+            AssetDatabase.SaveAssetIfDirty(map);
         }
     }
 

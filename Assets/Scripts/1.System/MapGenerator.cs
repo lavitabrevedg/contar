@@ -31,17 +31,20 @@ public class MapGenerator : MonoBehaviour
     public MapData mapData;
 
     [Header("Tile Prefabs")]
-    public GameObject emptyPrefab;
-    public GameObject startPrefab;
-    public GameObject exitPrefab;
-    public GameObject movePrefab;
-    public GameObject numberObstaclePrefab;
-    public GameObject wallPrefab;
+    [SerializeField] private GameObject emptyPrefab;
+    [SerializeField] private GameObject startPrefab;
+    [SerializeField] private GameObject exitPrefab;
+    [SerializeField] private GameObject movePrefab;
+    [SerializeField] private GameObject numberObstaclePrefab;
+    [SerializeField] private GameObject wallPrefab;
+    [SerializeField] private GameObject PlayerPrefab;
 
     [Header("Grid Settings")]
     public float tileSize = 1f;
 
     private BaseTile[,] _grid;
+
+    [SerializeField] private Vector2 tileOffset;
 
     private void Start()
     {
@@ -70,14 +73,18 @@ public class MapGenerator : MonoBehaviour
                 GameObject prefab = GetPrefab(tileData.type);
                 if (prefab == null) continue;
 
-                Vector3 pos = new Vector3(x * tileSize, y * tileSize, 0f);
+                Vector3 pos = new Vector3(x * tileSize + tileOffset.x, y * tileSize + tileOffset.y, 0f);
                 GameObject go = Instantiate(prefab, pos, Quaternion.identity, transform);
                 go.name = $"Tile_{x}_{y}_{tileData.type}";
 
                 BaseTile tile = go.GetComponent<BaseTile>();
                 tile.Init(tileData);
-
                 _grid[x, y] = tile;
+
+                if(tileData.type == TileType.Start)
+                {
+                    CreatePlayer(pos,x,y);
+                }
             }
         }
     }
@@ -101,13 +108,18 @@ public class MapGenerator : MonoBehaviour
     {
         switch (type)
         {
-            case TileType.Empty:          return emptyPrefab;
-            case TileType.Start:          return startPrefab;
-            case TileType.Exit:           return exitPrefab;
-            case TileType.Move:           return movePrefab;
+            case TileType.Empty: return emptyPrefab;
+            case TileType.Start: return startPrefab;
+            case TileType.Exit: return exitPrefab;
+            case TileType.Move: return movePrefab;
             case TileType.NumberObstacle: return numberObstaclePrefab;
-            case TileType.Wall:           return wallPrefab;
-            default:                      return null;
+            case TileType.Wall: return wallPrefab;
+            default: return null;
         }
+    }
+
+    private void CreatePlayer(Vector3 pos, int gridX, int gridY)
+    {
+        
     }
 }
