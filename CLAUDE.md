@@ -61,6 +61,8 @@ Unity **6000.3.12f1 (LTS)** — ensure this exact version is installed before op
 ## Coding Rules
 
 - `_` discard 패턴 사용 금지 (예: `_ => null`, `var _ = ...` 형태 모두 금지)
+- **외부 읽기 전용 프로퍼티**는 백킹 필드 + 별도 프로퍼티 대신 `public int Value { get; private set; }` 자동 프로퍼티 방식 사용
+  - 예외: getter/setter에 부가 로직이 있거나, `[SerializeField]`로 Inspector에 노출해야 할 때는 백킹 필드 방식 사용
 
 ## Asset Discipline
 
