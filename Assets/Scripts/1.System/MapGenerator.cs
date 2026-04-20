@@ -43,23 +43,14 @@ public class MapGenerator : MonoBehaviour
             for (int x = 0; x < mapData.width; x++)
             {
                 SerializedTile tileData = mapData.rows[y].values[x];
-                GameObject prefab = GetPrefab(tileData.type);
-                if (prefab == null) continue;
-
-                Vector3 pos = GridToWorld(x, y);
-                GameObject go = Instantiate(prefab, pos, Quaternion.identity, transform);
-                go.name = $"Tile_{x}_{y}_{tileData.type}";
-
-                BaseTile tile = go.GetComponent<BaseTile>();
-                tile.Init(tileData);
-                _grid[x, y] = tile;
-
-                if(tileData.type == TileType.Start)
-                {
-                    CreatePlayer(x, y);
-                }
+                CreateTile(x, y, tileData);
             }
         }
+
+        // 맵 생성 후 카메라를 맵 크기에 맞춰 조정
+        CameraFitter fitter = FindFirstObjectByType<CameraFitter>();
+        if (fitter != null)
+            fitter.Fit();
     }
 
     public void ClearMap()
@@ -87,6 +78,45 @@ public class MapGenerator : MonoBehaviour
         if (_grid == null || x < 0 || y < 0 || x >= mapData.width || y >= mapData.height)
             return null;
         return _grid[x, y];
+    }
+
+    /// <summary>
+    /// 두 셀의 타일을 맞바꾼다. _grid 참조 교환 + 각 타일의 transform.position 갱신.
+    /// 장애물 밀기 같은 "위치 교환" 동작에 사용.
+    /// </summary>
+    public void SwapTiles(Vector2Int a, Vector2Int b)
+    {
+        if (_grid == null) return;
+
+        BaseTile tileA = _grid[a.x, a.y];
+        BaseTile tileB = _grid[b.x, b.y];
+
+        _grid[a.x, a.y] = tileB;
+        _grid[b.x, b.y] = tileA;
+
+        if (tileA != null) tileA.transform.position = GridToWorld(b.x, b.y);
+        if (tileB != null) tileB.transform.position = GridToWorld(a.x, a.y);
+    }
+
+    private BaseTile CreateTile(int x, int y, SerializedTile tileData)
+    {
+        GameObject prefab = GetPrefab(tileData.type);
+        if (prefab == null) return null;
+
+        Vector3 pos = GridToWorld(x, y);
+        GameObject go = Instantiate(prefab, pos, Quaternion.identity, transform);
+        go.name = $"Tile_{x}_{y}_{tileData.type}";
+
+        BaseTile tile = go.GetComponent<BaseTile>();
+        tile.Init(tileData);
+        _grid[x, y] = tile;
+
+        if (tileData.type == TileType.Start)
+        {
+            CreatePlayer(x, y);
+        }
+
+        return tile;
     }
 
     private GameObject GetPrefab(TileType type)

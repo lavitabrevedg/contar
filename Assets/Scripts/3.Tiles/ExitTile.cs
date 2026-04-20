@@ -9,8 +9,12 @@ public class ExitTile : BaseTile
 
     public override void OnPlayerEnter()
     {
-        // if(CanEnter()) 흠...이거는 system에서 확인해줘야하나
-        //@TODO Exit Player
+        if (GameManager.Instance == null) return;
+
+        int remainingMoves = GameManager.Instance.CurrentMoveCount;
+        if (CanEnter(remainingMoves))
+            GameManager.Instance.NotifyStageCleared();
+        // 조건 불만족이면 그냥 타일 위에 서있는 상태 (피드백 UI는 추후)
     }
 
     private bool CanEnter(int moveCount)
@@ -23,5 +27,4 @@ public class ExitTile : BaseTile
             _                      => false
         };
     }
-
 }

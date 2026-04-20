@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f3a8d5c75258784894d732a597a2f86, type: 3}
   m_Name: TestStage
   m_EditorClassIdentifier: Assembly-CSharp::MapData
-  width: 6
-  height: 5
-  startMoveCount: 2
+  width: 5
+  height: 7
+  startMoveCount: 5
   rows:
   - values:
     - type: 0
@@ -26,7 +26,20 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 5
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
       value: 0
       exitCondition: 0
     - type: 0
@@ -51,32 +64,7 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
   - values:
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 3
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 0
-      value: 0
-      exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
@@ -96,7 +84,36 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 1
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
       value: 0
       exitCondition: 0
     - type: 0

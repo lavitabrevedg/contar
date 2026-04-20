@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -17,15 +18,15 @@ public class PlayerController : MonoBehaviour
         transform.position = startWorldPos;
     }
 
-    public void AnimateTo(Vector2Int targetGrid, Vector3 targetWorldPos)
+    public void AnimateTo(Vector2Int targetGrid, Vector3 targetWorldPos, Action onComplete = null)
     {
         if (_isMoving) return;
 
         Vector2Int direction = targetGrid - _gridPosition;
-        StartCoroutine(RollRoutine(direction, targetGrid, targetWorldPos));
+        StartCoroutine(RollRoutine(direction, targetGrid, targetWorldPos, onComplete));
     }
 
-    private IEnumerator RollRoutine(Vector2Int direction, Vector2Int targetGrid, Vector3 targetWorldPos)
+    private IEnumerator RollRoutine(Vector2Int direction, Vector2Int targetGrid, Vector3 targetWorldPos, Action onComplete)
     {
         _isMoving = true;
 
@@ -51,5 +52,7 @@ public class PlayerController : MonoBehaviour
         transform.rotation = endRot;
         _gridPosition = targetGrid;
         _isMoving = false;
+
+        onComplete?.Invoke();
     }
 }
