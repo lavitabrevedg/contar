@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public enum GameState
@@ -20,6 +21,10 @@ public class GameManager : MonoBehaviour
     public int CurrentMoveCount => _currentMoveCount;
     public MapGenerator MapGenerator => mapGenerator;
     public GameState State { get; private set; } = GameState.Playing;
+
+    public Action<int> MoveCountChanged;
+    public Action StageCleared;
+    public Action StageFailed;
 
     private void Awake()
     {

@@ -73,7 +73,6 @@ public class MoveResolver
             if (currentMoveCount < obstacle.value)
                 return MoveResult.Blocked("이동 횟수 부족 (밀기 비용)");
 
-            // 밀기 성공: 플레이어는 자리 유지, 장애물과 Empty 타일이 위치 교환
             MoveResult result = new MoveResult();
             result.isAllowed = true;
             result.playerTarget = currentPos;

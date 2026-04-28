@@ -14,7 +14,13 @@ public class CameraFitter : MonoBehaviour
     [SerializeField] private float verticalOffset = 0f;
 
     [Tooltip("카메라 기울기로 인한 세로 시야 축소를 보정. 큰 기울기일수록 값 증가.")]
-    [SerializeField] private float tiltSizeMultiplier = 1.05f;
+    [SerializeField] private float tiltSizeMultiplier = 1.25f;
+
+    [Tooltip("Orthographic board view camera distance from the map plane.")]
+    [SerializeField] private float cameraDistance = 10f;
+
+    [Tooltip("How far below the map center the camera sits before looking back at the board.")]
+    [SerializeField] private float viewTiltYOffset = 4f;
 
     private int _lastScreenWidth;
     private int _lastScreenHeight;
@@ -49,14 +55,18 @@ public class CameraFitter : MonoBehaviour
         float sizeByHeight = worldHeight / 2f;
         float sizeByWidth = worldWidth / 2f / screenAspect;
 
+        targetCamera.orthographic = true;
         targetCamera.orthographicSize = Mathf.Max(sizeByHeight, sizeByWidth) * tiltSizeMultiplier;
 
-        Vector3 centerPos = new Vector3(
+        Vector3 focusPos = new Vector3(
             (data.width - 1) * tileSize * 0.5f,
             (data.height - 1) * tileSize * 0.5f - verticalOffset,
-            -10f
+            0f
         );
-        targetCamera.transform.position = centerPos;
+
+        Vector3 cameraPos = focusPos + new Vector3(0f, -viewTiltYOffset, -cameraDistance);
+        targetCamera.transform.position = cameraPos;
+        targetCamera.transform.rotation = Quaternion.LookRotation(focusPos - cameraPos, Vector3.up);
 
         _lastScreenWidth = Screen.width;
         _lastScreenHeight = Screen.height;
