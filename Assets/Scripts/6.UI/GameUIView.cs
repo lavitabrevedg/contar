@@ -1,11 +1,36 @@
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameUIView : MonoBehaviour
 {
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private CanvasGroup clearPanel;
     [SerializeField] private CanvasGroup failPanel;
+    [SerializeField] private Button retryButton;
+    [SerializeField] private Button nextButton;
+
+    public event Action RetryClicked;
+    public event Action NextClicked;
+
+    private void OnEnable()
+    {
+        if (retryButton != null)
+            retryButton.onClick.AddListener(NotifyRetryClicked);
+
+        if (nextButton != null)
+            nextButton.onClick.AddListener(NotifyNextClicked);
+    }
+
+    private void OnDisable()
+    {
+        if (retryButton != null)
+            retryButton.onClick.RemoveListener(NotifyRetryClicked);
+
+        if (nextButton != null)
+            nextButton.onClick.RemoveListener(NotifyNextClicked);
+    }
 
     public void SetMoveCount(int moveCount)
     {
@@ -30,6 +55,16 @@ public class GameUIView : MonoBehaviour
     {
         HidePanel(clearPanel);
         HidePanel(failPanel);
+    }
+
+    private void NotifyRetryClicked()
+    {
+        RetryClicked?.Invoke();
+    }
+
+    private void NotifyNextClicked()
+    {
+        NextClicked?.Invoke();
     }
 
     private void ShowPanel(CanvasGroup panel)

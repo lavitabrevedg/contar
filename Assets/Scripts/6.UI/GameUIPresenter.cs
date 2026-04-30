@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class GameUIPresenter : MonoBehaviour
@@ -6,6 +7,9 @@ public class GameUIPresenter : MonoBehaviour
     [SerializeField] private GameUIView view;
 
     private bool _isBound;
+
+    public event Action RetryRequested;
+    public event Action NextStageRequested;
 
     private void Awake()
     {
@@ -48,8 +52,13 @@ public class GameUIPresenter : MonoBehaviour
 
         stateModel.MoveCountChanged -= OnMoveCountChanged;
         stateModel.StateChanged -= OnStateChanged;
+        view.RetryClicked -= OnRetryClicked;
+        view.NextClicked -= OnNextClicked;
+
         stateModel.MoveCountChanged += OnMoveCountChanged;
         stateModel.StateChanged += OnStateChanged;
+        view.RetryClicked += OnRetryClicked;
+        view.NextClicked += OnNextClicked;
 
         _isBound = true;
 
@@ -63,6 +72,8 @@ public class GameUIPresenter : MonoBehaviour
 
         stateModel.MoveCountChanged -= OnMoveCountChanged;
         stateModel.StateChanged -= OnStateChanged;
+        view.RetryClicked -= OnRetryClicked;
+        view.NextClicked -= OnNextClicked;
 
         _isBound = false;
     }
@@ -90,5 +101,15 @@ public class GameUIPresenter : MonoBehaviour
         {
             view.ShowFail();
         }
+    }
+
+    private void OnRetryClicked()
+    {
+        RetryRequested?.Invoke();
+    }
+
+    private void OnNextClicked()
+    {
+        NextStageRequested?.Invoke();
     }
 }

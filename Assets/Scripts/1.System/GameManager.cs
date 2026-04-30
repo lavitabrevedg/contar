@@ -96,6 +96,17 @@ public class GameManager : MonoBehaviour
         stateModel.AddMoveCount(delta);
     }
 
+    public void RestartStage()
+    {
+        if (mapGenerator == null)
+        {
+            Debug.LogWarning("[GameManager] Cannot restart stage because MapGenerator is missing.");
+            return;
+        }
+
+        mapGenerator.GenerateMap();
+    }
+
     public void NotifyStageCleared()
     {
         if (State != GameState.Playing) return;
