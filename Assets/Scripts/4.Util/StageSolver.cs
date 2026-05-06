@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
@@ -24,10 +25,12 @@ public static class StageSolver
         foreach (string guid in guids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            string name = Path.GetFileNameWithoutExtension(path);
+            if (!name.StartsWith("Stage_", System.StringComparison.Ordinal)) continue;
+
             MapData map = AssetDatabase.LoadAssetAtPath<MapData>(path);
             if (map == null) continue;
 
-            string name = Path.GetFileNameWithoutExtension(path);
             SolveResult r = Solve(map);
 
             if (r.isSolvable)
@@ -250,9 +253,9 @@ public static class StageSolver
                     int newRem  = cur.remaining - 1;
                     int newMask = cur.moveMask;
 
-                    if (types[nx, ny] == TileType.Move && moveBit.TryGetValue(nidx, out int bit))
+                    if (types[nx, ny] == TileType.Move && moveBit.TryGetValue(nidx, out int moveBitIndex))
                     {
-                        int flag = 1 << bit;
+                        int flag = 1 << moveBitIndex;
                         if ((cur.moveMask & flag) == 0)
                         {
                             newRem  += values[nx, ny];
@@ -282,3 +285,4 @@ public static class StageSolver
         };
     }
 }
+#endif

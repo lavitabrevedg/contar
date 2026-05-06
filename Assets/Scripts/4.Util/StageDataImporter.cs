@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.IO;
@@ -60,7 +61,9 @@ public class StageDataImporter : Editor
 
         string msg = $"{created}개 생성, {updated}개 업데이트 완료.";
         Debug.Log($"[StageDataImporter] {msg}");
-        EditorUtility.DisplayDialog("스테이지 임포트 완료", msg, "확인");
+
+        if (!Application.isBatchMode)
+            EditorUtility.DisplayDialog("스테이지 임포트 완료", msg, "확인");
     }
 
     private static void ApplyStageJson(MapData map, StageJson stageJson)
@@ -111,13 +114,13 @@ public class StageDataImporter : Editor
                 break;
             case "M":
                 tile.type = TileType.Move;
-                if (parts.Length > 1 && int.TryParse(parts[1], out int mv))
-                    tile.value = mv;
+                if (parts.Length > 1 && int.TryParse(parts[1], out int moveValue))
+                    tile.value = moveValue;
                 break;
             case "N":
                 tile.type = TileType.NumberObstacle;
-                if (parts.Length > 1 && int.TryParse(parts[1], out int nv))
-                    tile.value = nv;
+                if (parts.Length > 1 && int.TryParse(parts[1], out int numberObstacleValue))
+                    tile.value = numberObstacleValue;
                 break;
             case "W":
                 tile.type = TileType.Wall;
@@ -146,3 +149,4 @@ class StageJson
     public int      startMoveCount;
     public string[] rows;
 }
+#endif

@@ -2017,6 +2017,7 @@ GameObject:
   - component: {fileID: 1815340446}
   - component: {fileID: 1815340445}
   - component: {fileID: 1815340444}
+  - component: {fileID: 1815340447}
   m_Layer: 5
   m_Name: BackSceneButt
   m_TagString: Untagged
@@ -2086,7 +2087,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1815340445}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1815340447}
+        m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
+        m_MethodName: LoadLobby
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument:
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1815340445
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2125,6 +2138,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1815340442}
   m_CullTransparentMesh: 1
+--- !u!114 &1815340447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1815340442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ed7e98a27fb472086830820aa682e44, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
 --- !u!1 &1834324049
 GameObject:
   m_ObjectHideFlags: 0
