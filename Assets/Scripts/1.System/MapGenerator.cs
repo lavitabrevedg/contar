@@ -24,6 +24,20 @@ public class MapGenerator : MonoBehaviour
         GenerateMap();
     }
 
+    public void SetMapData(MapData nextMapData, bool regenerate)
+    {
+        if (nextMapData == null)
+        {
+            Debug.LogWarning("[MapGenerator] Cannot set an empty MapData.");
+            return;
+        }
+
+        mapData = nextMapData;
+
+        if (regenerate)
+            GenerateMap();
+    }
+
     public void GenerateMap()
     {
         ClearMap();

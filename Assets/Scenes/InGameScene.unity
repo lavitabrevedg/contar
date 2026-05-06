@@ -1765,7 +1765,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b80240412c563a142b689c2fa72ff810, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapGenerator
-  mapData: {fileID: 11400000, guid: 6906078031849a84a907f94ffab96ded, type: 2}
+  mapData: {fileID: 11400000, guid: fda7834cc9027cd43961172a6bcc1ef7, type: 2}
   emptyPrefab: {fileID: 4917229468523656600, guid: f4e971a4d3548e54c9818e9b1cc2d39e, type: 3}
   startPrefab: {fileID: 6158734540830819438, guid: 2603ed5d80f043341b441c9599191023, type: 3}
   exitPrefab: {fileID: 7019673698266267946, guid: 9824d23ceeabbb94fb795578c01dd610, type: 3}
@@ -2097,7 +2097,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument:
+          m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &1815340445
@@ -2148,7 +2148,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1ed7e98a27fb472086830820aa682e44, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
 --- !u!1 &1834324049
 GameObject:
@@ -2335,6 +2335,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   mapGenerator: {fileID: 1208478623}
   stateModel: {fileID: 2041801098}
+  progressService: {fileID: 0}
 --- !u!114 &2041801098
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2361,6 +2362,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowController
   uiPresenter: {fileID: 150347069}
   gameManager: {fileID: 2041801097}
+  stageCatalog: {fileID: 0}
+  progressService: {fileID: 0}
+  dummyAdService: {fileID: 0}
 --- !u!1 &2130694228
 GameObject:
   m_ObjectHideFlags: 0
