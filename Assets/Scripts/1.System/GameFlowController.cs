@@ -9,8 +9,8 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private StageProgressService progressService;
     [SerializeField] private DummyAdService dummyAdService;
 
-    private bool _isBound;
-    private bool _isShowingAd;
+    private bool isBound;
+    private bool isShowingAd;
 
     private void Awake()
     {
@@ -65,36 +65,30 @@ public class GameFlowController : MonoBehaviour
 
     private void Bind()
     {
-        if (_isBound) return;
+        if (isBound) return;
 
         ResolveReferences();
         if (uiPresenter == null) return;
 
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
+        uiPresenter.SkipStageRequested -= OnSkipStageRequested;
         uiPresenter.RetryRequested += OnRetryRequested;
         uiPresenter.NextStageRequested += OnNextStageRequested;
+        uiPresenter.SkipStageRequested += OnSkipStageRequested;
 
-        if (gameManager != null)
-        {
-            gameManager.StageFailed -= OnStageFailed;
-            gameManager.StageFailed += OnStageFailed;
-        }
-
-        _isBound = true;
+        isBound = true;
     }
 
     private void Unbind()
     {
-        if (!_isBound || uiPresenter == null) return;
+        if (!isBound || uiPresenter == null) return;
 
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
+        uiPresenter.SkipStageRequested -= OnSkipStageRequested;
 
-        if (gameManager != null)
-            gameManager.StageFailed -= OnStageFailed;
-
-        _isBound = false;
+        isBound = false;
     }
 
     private void OnRetryRequested()
@@ -104,25 +98,44 @@ public class GameFlowController : MonoBehaviour
 
         if (gameManager == null) return;
 
-        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage);
+        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage, false);
     }
 
     private void OnNextStageRequested()
+    {
+        LoadNextStage();
+    }
+
+    private void OnSkipStageRequested()
     {
         if (progressService == null || stageCatalog == null || gameManager == null)
             ResolveReferences();
 
         if (progressService == null || stageCatalog == null || gameManager == null)
         {
-            Debug.LogWarning("[GameFlowController] Cannot load next stage because stage flow references are missing.");
+            Debug.LogWarning("[GameFlowController] Cannot skip stage because stage flow references are missing.");
             return;
         }
 
-        int nextStageIndex = progressService.CurrentStageIndex + 1;
-        if (!LoadStage(nextStageIndex))
+        if (!HasNextStage())
         {
-            Debug.Log("[GameFlowController] All stages are cleared.");
+            Debug.Log("[GameFlowController] Cannot skip because there is no next stage.");
+            return;
         }
+
+        if (progressService.TryUseSkipTicket())
+        {
+            LoadNextStage();
+            return;
+        }
+
+        if (progressService.ShouldSuppressAds(progressService.CurrentStageIndex))
+        {
+            Debug.Log("[GameFlowController] Cannot skip because there are no skip tickets and ads are suppressed for this stage.");
+            return;
+        }
+
+        ShowAdThenRun(AdPlacement.SkipStage, () => LoadNextStage(), true);
     }
 
     private void LoadSavedStage()
@@ -149,26 +162,39 @@ public class GameFlowController : MonoBehaviour
         return true;
     }
 
-    private void OnStageFailed(int stageIndex, int failureCount)
+    private bool LoadNextStage()
     {
-        if (failureCount < 3)
-            return;
+        if (progressService == null || stageCatalog == null || gameManager == null)
+            ResolveReferences();
 
-        ShowAdThenRun(AdPlacement.RetryAfterFailures, ResetFailureCount);
-    }
-
-    private void ResetFailureCount()
-    {
-        if (progressService != null)
+        if (progressService == null || stageCatalog == null || gameManager == null)
         {
-            progressService.ResetFailureCount();
-            progressService.Save();
+            Debug.LogWarning("[GameFlowController] Cannot load next stage because stage flow references are missing.");
+            return false;
         }
+
+        int nextStageIndex = progressService.CurrentStageIndex + 1;
+        if (LoadStage(nextStageIndex))
+            return true;
+
+        Debug.Log("[GameFlowController] All stages are cleared.");
+        if (uiPresenter != null)
+            uiPresenter.RefreshProgressView();
+
+        return false;
     }
 
-    private void ShowAdThenRun(AdPlacement placement, Action completed)
+    private bool HasNextStage()
     {
-        if (_isShowingAd)
+        if (progressService == null || stageCatalog == null)
+            return false;
+
+        return progressService.CurrentStageIndex + 1 < stageCatalog.StageCount;
+    }
+
+    private void ShowAdThenRun(AdPlacement placement, Action completed, bool requireReadyAd)
+    {
+        if (isShowingAd)
             return;
 
         if (progressService == null)
@@ -177,22 +203,28 @@ public class GameFlowController : MonoBehaviour
         int stageIndex = progressService == null ? 0 : progressService.CurrentStageIndex;
         if (progressService == null || progressService.ShouldSuppressAds(stageIndex))
         {
-            completed?.Invoke();
+            if (!requireReadyAd)
+                completed?.Invoke();
+
             return;
         }
 
         IAdService adService = dummyAdService;
         if (adService == null || !adService.IsReady(placement))
         {
-            completed?.Invoke();
+            if (!requireReadyAd)
+                completed?.Invoke();
+
             return;
         }
 
-        _isShowingAd = true;
-        adService.Show(placement, success =>
+        isShowingAd = true;
+        adService.Show(placement, adSucceeded =>
         {
-            _isShowingAd = false;
-            completed?.Invoke();
+            isShowingAd = false;
+
+            if (adSucceeded || !requireReadyAd)
+                completed?.Invoke();
         });
     }
 }

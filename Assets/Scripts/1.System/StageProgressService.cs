@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class StageProgressService : MonoBehaviour
@@ -20,6 +21,10 @@ public class StageProgressService : MonoBehaviour
     public int SkipTicketCount { get; private set; }
     public int FailureStageIndex { get; private set; }
     public int FailureCount { get; private set; }
+    public bool HasSkipTicket => SkipTicketCount > 0;
+    public int MaxSkipTicketCountValue => MaxSkipTicketCount;
+
+    public event Action ProgressChanged;
 
     private void Awake()
     {
@@ -33,6 +38,8 @@ public class StageProgressService : MonoBehaviour
         SkipTicketCount = Mathf.Clamp(PlayerPrefs.GetInt(SkipTicketCountKey, InitialSkipTicketCount), 0, MaxSkipTicketCount);
         FailureStageIndex = PlayerPrefs.GetInt(FailureStageIndexKey, CurrentStageIndex);
         FailureCount = Mathf.Max(0, PlayerPrefs.GetInt(FailureCountKey, 0));
+
+        NotifyProgressChanged();
     }
 
     public void Save()
@@ -53,9 +60,10 @@ public class StageProgressService : MonoBehaviour
         CurrentStageIndex = clampedStageIndex;
 
         if (stageChanged)
-            ResetFailureCount();
+            ResetFailureCountInternal();
 
         Save();
+        NotifyProgressChanged();
     }
 
     public StageClearProgressResult MarkStageCleared(int stageIndex)
@@ -73,8 +81,9 @@ public class StageProgressService : MonoBehaviour
                 grantedSkipTicket = TryAddSkipTicket(1);
         }
 
-        ResetFailureCount();
+        ResetFailureCountInternal();
         Save();
+        NotifyProgressChanged();
 
         return new StageClearProgressResult(wasNewClear, grantedSkipTicket, SkipTicketCount);
     }
@@ -91,6 +100,7 @@ public class StageProgressService : MonoBehaviour
 
         FailureCount++;
         Save();
+        NotifyProgressChanged();
 
         return FailureCount;
     }
@@ -102,6 +112,7 @@ public class StageProgressService : MonoBehaviour
 
         SkipTicketCount--;
         Save();
+        NotifyProgressChanged();
         return true;
     }
 
@@ -112,8 +123,8 @@ public class StageProgressService : MonoBehaviour
 
     public void ResetFailureCount()
     {
-        FailureStageIndex = CurrentStageIndex;
-        FailureCount = 0;
+        ResetFailureCountInternal();
+        NotifyProgressChanged();
     }
 
     public void ResetProgress()
@@ -127,10 +138,21 @@ public class StageProgressService : MonoBehaviour
         Load();
     }
 
+    private void ResetFailureCountInternal()
+    {
+        FailureStageIndex = CurrentStageIndex;
+        FailureCount = 0;
+    }
+
     private bool TryAddSkipTicket(int count)
     {
         int previousCount = SkipTicketCount;
         SkipTicketCount = Mathf.Clamp(SkipTicketCount + count, 0, MaxSkipTicketCount);
         return SkipTicketCount > previousCount;
+    }
+
+    private void NotifyProgressChanged()
+    {
+        ProgressChanged?.Invoke();
     }
 }
