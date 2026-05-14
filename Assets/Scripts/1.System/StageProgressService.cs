@@ -22,7 +22,9 @@ public class StageProgressService : MonoBehaviour
     public int FailureStageIndex { get; private set; }
     public int FailureCount { get; private set; }
     public bool HasSkipTicket => SkipTicketCount > 0;
+    public bool HasAdSkipTicket => SkipTicketCount > 0;
     public int MaxSkipTicketCountValue => MaxSkipTicketCount;
+    public int MaxAdSkipTicketCountValue => MaxSkipTicketCount;
 
     public event Action ProgressChanged;
 
@@ -114,6 +116,11 @@ public class StageProgressService : MonoBehaviour
         Save();
         NotifyProgressChanged();
         return true;
+    }
+
+    public bool TryUseAdSkipTicket()
+    {
+        return TryUseSkipTicket();
     }
 
     public bool ShouldSuppressAds(int stageIndex)

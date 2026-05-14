@@ -25,7 +25,7 @@ public class GameFlowController : MonoBehaviour
     private void Start()
     {
         Bind();
-        LoadSavedStage();
+        LoadInitialStage();
     }
 
     private void OnDisable()
@@ -72,10 +72,10 @@ public class GameFlowController : MonoBehaviour
 
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
-        uiPresenter.SkipStageRequested -= OnSkipStageRequested;
+        uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
         uiPresenter.RetryRequested += OnRetryRequested;
         uiPresenter.NextStageRequested += OnNextStageRequested;
-        uiPresenter.SkipStageRequested += OnSkipStageRequested;
+        uiPresenter.AdSkipTicketRequested += OnAdSkipTicketRequested;
 
         isBound = true;
     }
@@ -86,7 +86,7 @@ public class GameFlowController : MonoBehaviour
 
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
-        uiPresenter.SkipStageRequested -= OnSkipStageRequested;
+        uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
 
         isBound = false;
     }
@@ -98,7 +98,7 @@ public class GameFlowController : MonoBehaviour
 
         if (gameManager == null) return;
 
-        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage, false);
+        RestartStageAfterAdChoice();
     }
 
     private void OnNextStageRequested()
@@ -106,36 +106,70 @@ public class GameFlowController : MonoBehaviour
         LoadNextStage();
     }
 
-    private void OnSkipStageRequested()
+    private void OnAdSkipTicketRequested()
     {
-        if (progressService == null || stageCatalog == null || gameManager == null)
+        if (progressService == null || gameManager == null)
             ResolveReferences();
 
-        if (progressService == null || stageCatalog == null || gameManager == null)
+        if (gameManager == null)
         {
-            Debug.LogWarning("[GameFlowController] Cannot skip stage because stage flow references are missing.");
+            Debug.LogWarning("[GameFlowController] Cannot restart stage because GameManager is missing.");
             return;
         }
 
-        if (!HasNextStage())
+        if (!IsAdRequiredForCurrentStage())
         {
-            Debug.Log("[GameFlowController] Cannot skip because there is no next stage.");
+            gameManager.RestartStage();
             return;
         }
 
-        if (progressService.TryUseSkipTicket())
+        if (progressService != null && progressService.TryUseAdSkipTicket())
         {
-            LoadNextStage();
+            gameManager.RestartStage();
             return;
         }
 
-        if (progressService.ShouldSuppressAds(progressService.CurrentStageIndex))
+        Debug.Log("[GameFlowController] Cannot skip ad because there are no skip tickets.");
+        if (uiPresenter != null)
+            uiPresenter.RefreshProgressView();
+    }
+
+    private void LoadInitialStage()
+    {
+        ResolveReferences();
+
+        if (gameManager == null)
+            return;
+
+        MapGenerator mapGenerator = gameManager.MapGenerator;
+        MapData inspectorMapData = mapGenerator == null ? null : mapGenerator.mapData;
+        if (inspectorMapData != null)
         {
-            Debug.Log("[GameFlowController] Cannot skip because there are no skip tickets and ads are suppressed for this stage.");
+            LoadInspectorStage(inspectorMapData);
             return;
         }
 
-        ShowAdThenRun(AdPlacement.SkipStage, () => LoadNextStage(), true);
+        LoadSavedStage();
+    }
+
+    private void LoadInspectorStage(MapData mapData)
+    {
+        if (mapData == null || gameManager == null)
+            return;
+
+        int stageIndex = stageCatalog == null ? -1 : stageCatalog.IndexOf(mapData);
+        if (stageIndex >= 0)
+        {
+            gameManager.SetStage(mapData, stageIndex);
+            Debug.Log($"[GameFlowController] Loaded inspector stage. stageIndex={stageIndex}, stageName={mapData.name}");
+            return;
+        }
+
+        MapGenerator mapGenerator = gameManager.MapGenerator;
+        if (mapGenerator != null)
+            mapGenerator.SetMapData(mapData, true);
+
+        Debug.Log($"[GameFlowController] Loaded inspector map data outside catalog. stageName={mapData.name}");
     }
 
     private void LoadSavedStage()
@@ -184,12 +218,29 @@ public class GameFlowController : MonoBehaviour
         return false;
     }
 
-    private bool HasNextStage()
+    private void RestartStageAfterAdChoice()
     {
-        if (progressService == null || stageCatalog == null)
+        if (gameManager == null)
+            return;
+
+        if (!IsAdRequiredForCurrentStage())
+        {
+            gameManager.RestartStage();
+            return;
+        }
+
+        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage, true);
+    }
+
+    private bool IsAdRequiredForCurrentStage()
+    {
+        if (progressService == null)
+            ResolveReferences();
+
+        if (progressService == null)
             return false;
 
-        return progressService.CurrentStageIndex + 1 < stageCatalog.StageCount;
+        return !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
     }
 
     private void ShowAdThenRun(AdPlacement placement, Action completed, bool requireReadyAd)
@@ -203,15 +254,15 @@ public class GameFlowController : MonoBehaviour
         int stageIndex = progressService == null ? 0 : progressService.CurrentStageIndex;
         if (progressService == null || progressService.ShouldSuppressAds(stageIndex))
         {
-            if (!requireReadyAd)
-                completed?.Invoke();
-
+            completed?.Invoke();
             return;
         }
 
         IAdService adService = dummyAdService;
         if (adService == null || !adService.IsReady(placement))
         {
+            Debug.LogWarning($"[GameFlowController] Ad is not ready. placement={placement}");
+
             if (!requireReadyAd)
                 completed?.Invoke();
 

@@ -13,7 +13,7 @@ public class GameUIPresenter : MonoBehaviour
 
     public event Action RetryRequested;
     public event Action NextStageRequested;
-    public event Action SkipStageRequested;
+    public event Action AdSkipTicketRequested;
 
     private void Awake()
     {
@@ -123,35 +123,24 @@ public class GameUIPresenter : MonoBehaviour
             view.SetStageInfo(0, 0);
             view.SetSkipTicketCount(0, 0);
             view.SetNextStageAvailable(false);
-            view.SetSkipButtonState(true, false, "스킵권 없음");
+            view.SetRetryButtonLabel("다시 시도");
+            view.SetSkipButtonState(false, false, "스킵권 없음");
             return;
         }
 
         int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
         int stageNumber = stageCount <= 0 ? 0 : Mathf.Clamp(progressService.CurrentStageIndex + 1, 1, stageCount);
         bool hasNextStage = stageCount > 0 && progressService.CurrentStageIndex + 1 < stageCount;
-        bool canUseAdSkip = !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
-        bool canSkip = hasNextStage && (progressService.HasSkipTicket || canUseAdSkip);
-        string skipLabel = GetSkipLabel(hasNextStage, canSkip, canUseAdSkip);
+        bool isAdRequired = !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
+        bool hasAdSkipTicket = progressService.HasAdSkipTicket;
+        string retryLabel = isAdRequired ? "광고 보기" : "다시 시도";
+        string skipLabel = hasAdSkipTicket ? $"스킵권 사용 ({progressService.SkipTicketCount})" : "스킵권 없음";
 
         view.SetStageInfo(stageNumber, stageCount);
         view.SetSkipTicketCount(progressService.SkipTicketCount, progressService.MaxSkipTicketCountValue);
         view.SetNextStageAvailable(hasNextStage);
-        view.SetSkipButtonState(true, canSkip, skipLabel);
-    }
-
-    private string GetSkipLabel(bool hasNextStage, bool canSkip, bool canUseAdSkip)
-    {
-        if (!hasNextStage)
-            return "마지막";
-
-        if (progressService.HasSkipTicket)
-            return $"스킵 ({progressService.SkipTicketCount})";
-
-        if (canSkip && canUseAdSkip)
-            return "광고로 스킵";
-
-        return "스킵권 없음";
+        view.SetRetryButtonLabel(retryLabel);
+        view.SetSkipButtonState(isAdRequired, hasAdSkipTicket, skipLabel);
     }
 
     private void OnMoveCountChanged(int moveCount)
@@ -163,18 +152,21 @@ public class GameUIPresenter : MonoBehaviour
     {
         if (state == GameState.Playing)
         {
+            RefreshProgressView();
             view.HideResultPanels();
             return;
         }
 
         if (state == GameState.Cleared)
         {
+            RefreshProgressView();
             view.ShowClear();
             return;
         }
 
         if (state == GameState.Failed)
         {
+            RefreshProgressView();
             view.ShowFail();
         }
     }
@@ -196,6 +188,6 @@ public class GameUIPresenter : MonoBehaviour
 
     private void OnSkipClicked()
     {
-        SkipStageRequested?.Invoke();
+        AdSkipTicketRequested?.Invoke();
     }
 }

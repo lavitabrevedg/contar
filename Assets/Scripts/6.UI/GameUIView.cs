@@ -13,9 +13,11 @@ public class GameUIView : MonoBehaviour
     [SerializeField] private Button retryButton;
     [SerializeField] private Button nextButton;
     [SerializeField] private Button skipButton;
+    [SerializeField] private TMP_Text retryButtonText;
     [SerializeField] private TMP_Text nextButtonText;
     [SerializeField] private TMP_Text skipButtonText;
 
+    private string retryButtonDefaultLabel;
     private string nextButtonDefaultLabel;
     private bool skipButtonShouldBeVisible = true;
     private bool skipButtonShouldInteract;
@@ -92,6 +94,15 @@ public class GameUIView : MonoBehaviour
 
         if (nextButtonText != null)
             nextButtonText.text = isAvailable ? nextButtonDefaultLabel : "마지막";
+    }
+
+    public void SetRetryButtonLabel(string label)
+    {
+        CacheButtonLabels();
+
+        if (retryButtonText == null) return;
+
+        retryButtonText.text = string.IsNullOrWhiteSpace(label) ? retryButtonDefaultLabel : label;
     }
 
     public void SetSkipButtonState(bool isVisible, bool isInteractable, string label)
@@ -175,15 +186,28 @@ public class GameUIView : MonoBehaviour
 
     private void CacheButtonLabels()
     {
-        if (!string.IsNullOrEmpty(nextButtonDefaultLabel))
-            return;
+        ResolveButtonTextReferences();
 
-        if (nextButtonText != null && !string.IsNullOrWhiteSpace(nextButtonText.text))
+        if (string.IsNullOrEmpty(retryButtonDefaultLabel))
         {
-            nextButtonDefaultLabel = nextButtonText.text;
-            return;
+            if (retryButtonText != null && !string.IsNullOrWhiteSpace(retryButtonText.text))
+                retryButtonDefaultLabel = retryButtonText.text;
+            else
+                retryButtonDefaultLabel = "다시 시도";
         }
 
-        nextButtonDefaultLabel = "다음";
+        if (string.IsNullOrEmpty(nextButtonDefaultLabel))
+        {
+            if (nextButtonText != null && !string.IsNullOrWhiteSpace(nextButtonText.text))
+                nextButtonDefaultLabel = nextButtonText.text;
+            else
+                nextButtonDefaultLabel = "다음";
+        }
+    }
+
+    private void ResolveButtonTextReferences()
+    {
+        if (retryButtonText == null && retryButton != null)
+            retryButtonText = retryButton.GetComponentInChildren<TMP_Text>(true);
     }
 }
