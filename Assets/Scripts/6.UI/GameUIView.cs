@@ -16,6 +16,11 @@ public class GameUIView : MonoBehaviour
     [SerializeField] private TMP_Text retryButtonText;
     [SerializeField] private TMP_Text nextButtonText;
     [SerializeField] private TMP_Text skipButtonText;
+    [SerializeField] private TMP_Text clearStageText;
+    [SerializeField] private TMP_Text clearMoveText;
+    [SerializeField] private TMP_Text rewardText;
+    [SerializeField] private TMP_Text failureInfoText;
+    [SerializeField] private Button lobbyButton;
 
     private string retryButtonDefaultLabel;
     private string nextButtonDefaultLabel;
@@ -26,6 +31,7 @@ public class GameUIView : MonoBehaviour
     public event Action RetryClicked;
     public event Action NextClicked;
     public event Action SkipClicked;
+    public event Action LobbyClicked;
 
     private void Awake()
     {
@@ -44,6 +50,9 @@ public class GameUIView : MonoBehaviour
 
         if (skipButton != null)
             skipButton.onClick.AddListener(NotifySkipClicked);
+
+        if (lobbyButton != null)
+            lobbyButton.onClick.AddListener(NotifyLobbyClicked);
     }
 
     private void OnDisable()
@@ -56,6 +65,9 @@ public class GameUIView : MonoBehaviour
 
         if (skipButton != null)
             skipButton.onClick.RemoveListener(NotifySkipClicked);
+
+        if (lobbyButton != null)
+            lobbyButton.onClick.RemoveListener(NotifyLobbyClicked);
     }
 
     public void SetMoveCount(int moveCount)
@@ -116,6 +128,29 @@ public class GameUIView : MonoBehaviour
         ApplySkipButtonState();
     }
 
+    public void SetClearResult(int stageNumber, int remainingMoveCount, bool grantedSkipTicket, int skipTicketCount)
+    {
+        if (clearStageText != null)
+            clearStageText.text = $"스테이지 {stageNumber} 클리어";
+
+        if (clearMoveText != null)
+            clearMoveText.text = $"남은 이동 {remainingMoveCount}";
+
+        if (rewardText != null)
+        {
+            rewardText.gameObject.SetActive(grantedSkipTicket);
+            rewardText.text = grantedSkipTicket ? $"스킵권 +1 ({skipTicketCount})" : string.Empty;
+        }
+    }
+
+    public void SetFailureInfo(int failureCount, int failureCountForAd)
+    {
+        if (failureInfoText == null)
+            return;
+
+        failureInfoText.text = failureCountForAd <= 0 ? string.Empty : $"실패 {failureCount}/{failureCountForAd}";
+    }
+
     private void ApplySkipButtonState()
     {
         if (skipButton == null) return;
@@ -162,6 +197,11 @@ public class GameUIView : MonoBehaviour
     private void NotifySkipClicked()
     {
         SkipClicked?.Invoke();
+    }
+
+    private void NotifyLobbyClicked()
+    {
+        LobbyClicked?.Invoke();
     }
 
     private void ShowPanel(CanvasGroup panel)

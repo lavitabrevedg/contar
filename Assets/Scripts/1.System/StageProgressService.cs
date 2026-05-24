@@ -15,6 +15,7 @@ public class StageProgressService : MonoBehaviour
     private const int MaxSkipTicketCount = 5;
     private const int SkipTicketGrantInterval = 3;
     private const int AdFreeStageCount = 6;
+    private const int FailureCountForAd = 3;
 
     public int CurrentStageIndex { get; private set; }
     public int HighestClearedStageIndex { get; private set; }
@@ -25,6 +26,7 @@ public class StageProgressService : MonoBehaviour
     public bool HasAdSkipTicket => SkipTicketCount > 0;
     public int MaxSkipTicketCountValue => MaxSkipTicketCount;
     public int MaxAdSkipTicketCountValue => MaxSkipTicketCount;
+    public int FailureCountForAdValue => FailureCountForAd;
 
     public event Action ProgressChanged;
 
@@ -126,6 +128,16 @@ public class StageProgressService : MonoBehaviour
     public bool ShouldSuppressAds(int stageIndex)
     {
         return stageIndex < AdFreeStageCount;
+    }
+
+    public bool ShouldShowAdForFailureRetry(int stageIndex)
+    {
+        return !ShouldSuppressAds(stageIndex) && FailureCount >= FailureCountForAd;
+    }
+
+    public bool ShouldShowAdForManualRestart(int stageIndex)
+    {
+        return !ShouldSuppressAds(stageIndex);
     }
 
     public void ResetFailureCount()

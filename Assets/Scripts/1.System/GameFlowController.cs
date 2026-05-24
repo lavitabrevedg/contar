@@ -8,6 +8,7 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private StageCatalog stageCatalog;
     [SerializeField] private StageProgressService progressService;
     [SerializeField] private DummyAdService dummyAdService;
+    [SerializeField] private bool useInspectorStageOnStart;
 
     private bool isBound;
     private bool isShowingAd;
@@ -73,9 +74,11 @@ public class GameFlowController : MonoBehaviour
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
         uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
+        uiPresenter.LobbyRequested -= OnLobbyRequested;
         uiPresenter.RetryRequested += OnRetryRequested;
         uiPresenter.NextStageRequested += OnNextStageRequested;
         uiPresenter.AdSkipTicketRequested += OnAdSkipTicketRequested;
+        uiPresenter.LobbyRequested += OnLobbyRequested;
 
         isBound = true;
     }
@@ -87,6 +90,7 @@ public class GameFlowController : MonoBehaviour
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
         uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
+        uiPresenter.LobbyRequested -= OnLobbyRequested;
 
         isBound = false;
     }
@@ -117,7 +121,7 @@ public class GameFlowController : MonoBehaviour
             return;
         }
 
-        if (!IsAdRequiredForCurrentStage())
+        if (!IsFailureRetryAdRequiredForCurrentStage())
         {
             gameManager.RestartStage();
             return;
@@ -134,6 +138,11 @@ public class GameFlowController : MonoBehaviour
             uiPresenter.RefreshProgressView();
     }
 
+    private void OnLobbyRequested()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("LobbyScene");
+    }
+
     private void LoadInitialStage()
     {
         ResolveReferences();
@@ -141,15 +150,27 @@ public class GameFlowController : MonoBehaviour
         if (gameManager == null)
             return;
 
+        if (useInspectorStageOnStart && TryLoadInspectorStage())
+            return;
+
+        if (LoadSavedStage())
+            return;
+
+        TryLoadInspectorStage();
+    }
+
+    private bool TryLoadInspectorStage()
+    {
+        if (gameManager == null)
+            return false;
+
         MapGenerator mapGenerator = gameManager.MapGenerator;
         MapData inspectorMapData = mapGenerator == null ? null : mapGenerator.mapData;
-        if (inspectorMapData != null)
-        {
-            LoadInspectorStage(inspectorMapData);
-            return;
-        }
+        if (inspectorMapData == null)
+            return false;
 
-        LoadSavedStage();
+        LoadInspectorStage(inspectorMapData);
+        return true;
     }
 
     private void LoadInspectorStage(MapData mapData)
@@ -172,15 +193,15 @@ public class GameFlowController : MonoBehaviour
         Debug.Log($"[GameFlowController] Loaded inspector map data outside catalog. stageName={mapData.name}");
     }
 
-    private void LoadSavedStage()
+    private bool LoadSavedStage()
     {
         ResolveReferences();
 
         if (progressService == null || stageCatalog == null || gameManager == null)
-            return;
+            return false;
 
         int stageIndex = Mathf.Clamp(progressService.CurrentStageIndex, 0, Mathf.Max(0, stageCatalog.StageCount - 1));
-        LoadStage(stageIndex);
+        return LoadStage(stageIndex);
     }
 
     private bool LoadStage(int stageIndex)
@@ -223,7 +244,7 @@ public class GameFlowController : MonoBehaviour
         if (gameManager == null)
             return;
 
-        if (!IsAdRequiredForCurrentStage())
+        if (!IsFailureRetryAdRequiredForCurrentStage())
         {
             gameManager.RestartStage();
             return;
@@ -232,7 +253,7 @@ public class GameFlowController : MonoBehaviour
         ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage, true);
     }
 
-    private bool IsAdRequiredForCurrentStage()
+    private bool IsFailureRetryAdRequiredForCurrentStage()
     {
         if (progressService == null)
             ResolveReferences();
@@ -240,7 +261,7 @@ public class GameFlowController : MonoBehaviour
         if (progressService == null)
             return false;
 
-        return !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
+        return progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex);
     }
 
     private void ShowAdThenRun(AdPlacement placement, Action completed, bool requireReadyAd)

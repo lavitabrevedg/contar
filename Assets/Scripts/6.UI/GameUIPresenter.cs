@@ -14,6 +14,7 @@ public class GameUIPresenter : MonoBehaviour
     public event Action RetryRequested;
     public event Action NextStageRequested;
     public event Action AdSkipTicketRequested;
+    public event Action LobbyRequested;
 
     private void Awake()
     {
@@ -68,12 +69,14 @@ public class GameUIPresenter : MonoBehaviour
             view.RetryClicked -= OnRetryClicked;
             view.NextClicked -= OnNextClicked;
             view.SkipClicked -= OnSkipClicked;
+            view.LobbyClicked -= OnLobbyClicked;
 
             stateModel.MoveCountChanged += OnMoveCountChanged;
             stateModel.StateChanged += OnStateChanged;
             view.RetryClicked += OnRetryClicked;
             view.NextClicked += OnNextClicked;
             view.SkipClicked += OnSkipClicked;
+            view.LobbyClicked += OnLobbyClicked;
 
             isBound = true;
         }
@@ -104,6 +107,7 @@ public class GameUIPresenter : MonoBehaviour
             view.RetryClicked -= OnRetryClicked;
             view.NextClicked -= OnNextClicked;
             view.SkipClicked -= OnSkipClicked;
+            view.LobbyClicked -= OnLobbyClicked;
         }
 
         if (isProgressBound && progressService != null)
@@ -131,7 +135,7 @@ public class GameUIPresenter : MonoBehaviour
         int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
         int stageNumber = stageCount <= 0 ? 0 : Mathf.Clamp(progressService.CurrentStageIndex + 1, 1, stageCount);
         bool hasNextStage = stageCount > 0 && progressService.CurrentStageIndex + 1 < stageCount;
-        bool isAdRequired = !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
+        bool isAdRequired = progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex);
         bool hasAdSkipTicket = progressService.HasAdSkipTicket;
         string retryLabel = isAdRequired ? "광고 보기" : "다시 시도";
         string skipLabel = hasAdSkipTicket ? $"스킵권 사용 ({progressService.SkipTicketCount})" : "스킵권 없음";
@@ -141,6 +145,7 @@ public class GameUIPresenter : MonoBehaviour
         view.SetNextStageAvailable(hasNextStage);
         view.SetRetryButtonLabel(retryLabel);
         view.SetSkipButtonState(isAdRequired, hasAdSkipTicket, skipLabel);
+        view.SetFailureInfo(progressService.FailureCount, progressService.FailureCountForAdValue);
     }
 
     private void OnMoveCountChanged(int moveCount)
@@ -160,6 +165,7 @@ public class GameUIPresenter : MonoBehaviour
         if (state == GameState.Cleared)
         {
             RefreshProgressView();
+            SetClearResultView();
             view.ShowClear();
             return;
         }
@@ -189,5 +195,22 @@ public class GameUIPresenter : MonoBehaviour
     private void OnSkipClicked()
     {
         AdSkipTicketRequested?.Invoke();
+    }
+
+    private void OnLobbyClicked()
+    {
+        LobbyRequested?.Invoke();
+    }
+
+    private void SetClearResultView()
+    {
+        if (view == null)
+            return;
+
+        GameManager gameManager = GameManager.Instance;
+        int stageNumber = progressService == null ? 0 : progressService.CurrentStageIndex + 1;
+        int remainingMoveCount = stateModel == null ? 0 : stateModel.MoveCount;
+        StageClearProgressResult progressResult = gameManager == null ? new StageClearProgressResult(false, false, 0) : gameManager.LastStageClearProgressResult;
+        view.SetClearResult(stageNumber, remainingMoveCount, progressResult.GrantedSkipTicket, progressResult.SkipTicketCount);
     }
 }

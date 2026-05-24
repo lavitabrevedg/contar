@@ -13,8 +13,12 @@ public class ExitTile : BaseTile
 
         int remainingMoves = GameManager.Instance.CurrentMoveCount;
         if (CanEnter(remainingMoves))
+        {
             GameManager.Instance.NotifyStageCleared();
-        // 조건 불만족이면 그냥 타일 위에 서있는 상태 (피드백 UI는 추후)
+            return;
+        }
+
+        GameManager.Instance.NotifyExitBlocked(condition);
     }
 
     private bool CanEnter(int moveCount)

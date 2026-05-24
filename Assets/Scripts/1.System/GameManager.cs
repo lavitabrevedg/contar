@@ -8,15 +8,18 @@ public class GameManager : MonoBehaviour
     [SerializeField] private MapGenerator mapGenerator;
     [SerializeField] private GameStateModel stateModel;
     [SerializeField] private StageProgressService progressService;
+    [SerializeField] private AudioService audioService;
 
-    private PlayerController _player;
-    private MoveResolver _moveResolver;
+    private PlayerController player;
+    private MoveResolver moveResolver;
 
     public int CurrentMoveCount => stateModel.MoveCount;
     public MapGenerator MapGenerator => mapGenerator;
     public GameState State => stateModel.State;
     public GameStateModel StateModel => stateModel;
     public StageProgressService ProgressService => progressService;
+    public StageClearProgressResult LastStageClearProgressResult { get; private set; }
+    public int LastFailureCount { get; private set; }
 
     public event Action<int> StageCleared;
     public event Action<int, int> StageFailed;
@@ -38,7 +41,8 @@ public class GameManager : MonoBehaviour
             stateModel = gameObject.AddComponent<GameStateModel>();
 
         ResolveProgressService();
-        _moveResolver = new MoveResolver(mapGenerator);
+        ResolveAudioService();
+        moveResolver = new MoveResolver(mapGenerator);
     }
 
     private void OnDestroy()
@@ -49,7 +53,7 @@ public class GameManager : MonoBehaviour
 
     public void RegisterPlayer(PlayerController player, Vector2Int startGrid)
     {
-        _player = player;
+        this.player = player;
 
         int startMoveCount = 0;
         if (mapGenerator != null && mapGenerator.mapData != null)
@@ -58,23 +62,30 @@ public class GameManager : MonoBehaviour
         stateModel.StartStage(startMoveCount);
 
         Vector3 startWorldPos = mapGenerator.GridToWorld(startGrid.x, startGrid.y);
-        _player.Init(startGrid, startWorldPos);
+        this.player.Init(startGrid, startWorldPos);
     }
 
     public void OnSwipe(Vector2Int direction)
     {
         if (State != GameState.Playing) return;
-        if (_player == null) return;
-        if (_player.IsMoving) return;
+        if (player == null) return;
+        if (player.IsMoving) return;
         if (direction == Vector2Int.zero) return;
 
-        MoveResult result = _moveResolver.Resolve(_player.GridPosition, direction, CurrentMoveCount);
-        if (!result.isAllowed) return;
+        MoveResult result = moveResolver.Resolve(player.GridPosition, direction, CurrentMoveCount);
+        if (!result.isAllowed)
+        {
+            NotifyMoveBlocked();
+            return;
+        }
 
         stateModel.SpendMoveCount(result.moveCost);
 
         if (result.pushedObstacle != null)
         {
+            if (audioService != null)
+                audioService.PlayPush();
+
             mapGenerator.SwapTiles(result.obstacleFrom, result.obstacleTarget);
 
             if (State == GameState.Playing && CurrentMoveCount <= 0)
@@ -85,7 +96,10 @@ public class GameManager : MonoBehaviour
 
         Vector3 targetWorldPos = mapGenerator.GridToWorld(result.playerTarget.x, result.playerTarget.y);
         Vector2Int landedGrid = result.playerTarget;
-        _player.AnimateTo(result.playerTarget, targetWorldPos, () => OnPlayerLanded(landedGrid));
+        if (audioService != null)
+            audioService.PlayMove();
+
+        player.AnimateTo(result.playerTarget, targetWorldPos, () => OnPlayerLanded(landedGrid));
     }
 
     private void OnPlayerLanded(Vector2Int grid)
@@ -141,7 +155,11 @@ public class GameManager : MonoBehaviour
         if (progressService != null)
             progressResult = progressService.MarkStageCleared(stageIndex);
 
+        LastStageClearProgressResult = progressResult;
         stateModel.Clear();
+        if (audioService != null)
+            audioService.PlayClear();
+
         StageCleared?.Invoke(stageIndex);
 
         if (progressResult.GrantedSkipTicket)
@@ -160,9 +178,19 @@ public class GameManager : MonoBehaviour
         if (progressService != null)
             failureCount = progressService.RecordFailure(stageIndex);
 
+        LastFailureCount = failureCount;
         stateModel.Fail();
+        if (audioService != null)
+            audioService.PlayFail();
+
         StageFailed?.Invoke(stageIndex, failureCount);
         Debug.Log($"[GameManager] Stage failed. stageIndex={stageIndex}, failureCount={failureCount}");
+    }
+
+    public void NotifyExitBlocked(ExitCondition condition)
+    {
+        if (audioService != null)
+            audioService.PlayBlocked();
     }
 
     private void ResolveProgressService()
@@ -177,6 +205,12 @@ public class GameManager : MonoBehaviour
             progressService = gameObject.AddComponent<StageProgressService>();
     }
 
+    private void ResolveAudioService()
+    {
+        if (audioService == null)
+            audioService = FindFirstObjectByType<AudioService>();
+    }
+
     private int GetCurrentStageIndex()
     {
         if (progressService == null)
@@ -186,5 +220,11 @@ public class GameManager : MonoBehaviour
             return 0;
 
         return progressService.CurrentStageIndex;
+    }
+
+    private void NotifyMoveBlocked()
+    {
+        if (audioService != null)
+            audioService.PlayBlocked();
     }
 }
