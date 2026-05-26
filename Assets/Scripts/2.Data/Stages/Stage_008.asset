@@ -20,91 +20,6 @@ MonoBehaviour:
     - type: 5
       value: 0
       exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 1
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
     - type: 0
       value: 0
       exitCondition: 0
@@ -114,23 +29,7 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
+    - type: 0
       value: 0
       exitCondition: 0
     - type: 0
@@ -139,6 +38,41 @@ MonoBehaviour:
     - type: 2
       value: 0
       exitCondition: 0
+  - values:
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
     - type: 5
       value: 0
       exitCondition: 0
@@ -146,6 +80,72 @@ MonoBehaviour:
       value: 0
       exitCondition: 0
     - type: 5
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 3
+      value: 8
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 1
       value: 0
       exitCondition: 0
   - values:

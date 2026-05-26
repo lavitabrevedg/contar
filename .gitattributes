@@ -1,0 +1,8 @@
+Assets/Firebase/**/*.bundle filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.so filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.dll filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.dylib filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.aar filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.srcaar filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.jar filter=lfs diff=lfs merge=lfs -text
+Assets/Firebase/**/*.a filter=lfs diff=lfs merge=lfs -text

@@ -53,7 +53,7 @@ public class MapEditor : Editor
                 Color prev = GUI.backgroundColor;
                 GUI.backgroundColor = isSelected ? Color.magenta : GetTileColor(tile.type);
 
-                if (GUILayout.Button(GetTileLabel(tile.type), GUILayout.Width(50), GUILayout.Height(50)))
+                if (GUILayout.Button(GetTileLabel(tile), GUILayout.Width(50), GUILayout.Height(50)))
                 {
                     if (isSelected)
                     {
@@ -103,17 +103,38 @@ public class MapEditor : Editor
         }
     }
 
-    private string GetTileLabel(TileType type)
+    private string GetTileLabel(SerializedTile tile)
     {
-        switch (type)
+        switch (tile.type)
         {
             case TileType.Empty:          return "Empty";
             case TileType.Start:          return "Start";
-            case TileType.Exit:           return "Exit";
-            case TileType.Move:           return "Move";
-            case TileType.NumberObstacle: return "Num";
+            case TileType.Exit:           return GetExitLabel(tile.exitCondition);
+            case TileType.Move:           return $"M:{FormatMoveValue(tile.value)}";
+            case TileType.NumberObstacle: return $"N:{tile.value}";
             case TileType.Wall:           return "Wall";
             default:                      return "?";
+        }
+    }
+
+    private string FormatMoveValue(int value)
+    {
+        if (value > 0)
+            return $"+{value}";
+
+        return value.ToString();
+    }
+
+    private string GetExitLabel(ExitCondition condition)
+    {
+        switch (condition)
+        {
+            case ExitCondition.OddOnly:
+                return "X:O";
+            case ExitCondition.EvenOnly:
+                return "X:V";
+            default:
+                return "Exit";
         }
     }
 

@@ -88,7 +88,7 @@ public class StageSelectView : MonoBehaviour
             label = stageButtonTexts[buttonIndex];
 
         if (label != null)
-            label.text = isAvailable ? $"Stage {stageIndex + 1}" : $"Stage {stageIndex + 1} 잠김";
+            label.text = isAvailable ? $"Stage {stageIndex + 1}" : $"Stage {stageIndex + 1}";
     }
 
     public int StageButtonCount => stageButtons == null ? 0 : stageButtons.Length;

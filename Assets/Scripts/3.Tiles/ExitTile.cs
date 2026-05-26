@@ -5,6 +5,7 @@ public class ExitTile : BaseTile
     public override void Init(SerializedTile data)
     {
         condition = data.exitCondition;
+        SetTileLabel(GetConditionLabel(condition));
     }
 
     public override void OnPlayerEnter()
@@ -23,12 +24,29 @@ public class ExitTile : BaseTile
 
     private bool CanEnter(int moveCount)
     {
-        return condition switch
+        switch (condition)
         {
-            ExitCondition.Free     => true,
-            ExitCondition.OddOnly  => moveCount % 2 != 0,
-            ExitCondition.EvenOnly => moveCount % 2 == 0,
-            _                      => false
-        };
+            case ExitCondition.Free:
+                return true;
+            case ExitCondition.OddOnly:
+                return moveCount % 2 != 0;
+            case ExitCondition.EvenOnly:
+                return moveCount % 2 == 0;
+            default:
+                return false;
+        }
+    }
+
+    private string GetConditionLabel(ExitCondition exitCondition)
+    {
+        switch (exitCondition)
+        {
+            case ExitCondition.OddOnly:
+                return "ODD";
+            case ExitCondition.EvenOnly:
+                return "EVEN";
+            default:
+                return "EXIT";
+        }
     }
 }

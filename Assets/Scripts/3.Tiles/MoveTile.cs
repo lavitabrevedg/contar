@@ -9,6 +9,7 @@ public class MoveTile : BaseTile
     {
         value = data.value;
         IsConsumed = false;
+        SetTileLabel(FormatValue(value));
     }
 
     public override void OnPlayerEnter()
@@ -20,5 +21,14 @@ public class MoveTile : BaseTile
 
         IsConsumed = true;
         GameManager.Instance.AddMoveCount(value);
+        SetTileLabel(string.Empty);
+    }
+
+    private string FormatValue(int moveValue)
+    {
+        if (moveValue > 0)
+            return $"+{moveValue}";
+
+        return moveValue.ToString();
     }
 }
