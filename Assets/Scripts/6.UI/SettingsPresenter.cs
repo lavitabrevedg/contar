@@ -53,17 +53,31 @@ public class SettingsPresenter : MonoBehaviour
         view.CloseClicked += OnCloseClicked;
         view.SoundClicked += OnSoundClicked;
         view.ResetProgressClicked += OnResetProgressClicked;
+
+        if (settingsService != null)
+        {
+            settingsService.SettingsChanged -= Refresh;
+            settingsService.SettingsChanged += Refresh;
+        }
     }
 
     private void Unbind()
     {
         if (view == null)
+        {
+            if (settingsService != null)
+                settingsService.SettingsChanged -= Refresh;
+
             return;
+        }
 
         view.OpenClicked -= OnOpenClicked;
         view.CloseClicked -= OnCloseClicked;
         view.SoundClicked -= OnSoundClicked;
         view.ResetProgressClicked -= OnResetProgressClicked;
+
+        if (settingsService != null)
+            settingsService.SettingsChanged -= Refresh;
     }
 
     private void OnOpenClicked()
@@ -104,6 +118,9 @@ public class SettingsPresenter : MonoBehaviour
         ResolveReferences();
         if (progressService != null)
             progressService.ResetProgress();
+
+        if (audioService != null)
+            audioService.PlayUi();
 
         Refresh();
     }

@@ -3622,6 +3622,53 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &1005416908
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1005416910}
+  - component: {fileID: 1005416909}
+  m_Layer: 0
+  m_Name: _FireBase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1005416909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1005416908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 906d21e364b75a64d90d31a3e89cc74f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Firebase_Manager
+  progressService: {fileID: 1337631748}
+  readDataOnLogin: 1
+  writeDataOnProgressChanged: 1
+--- !u!4 &1005416910
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1005416908}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1079184228
 GameObject:
   m_ObjectHideFlags: 0
@@ -5750,6 +5797,7 @@ MonoBehaviour:
   soundButton: {fileID: 422891551}
   resetProgressButton: {fileID: 2057954548}
   soundButtonText: {fileID: 757220262}
+  hidePanelOnAwake: 1
 --- !u!114 &1914569263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5763,7 +5811,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageSelectPresenter
   view: {fileID: 1914569264}
-  stageCatalog: {fileID: 0}
+  stageCatalog: {fileID: 11400000, guid: 26ad48a0786b45449c41c984c7f1f92b, type: 2}
   progressService: {fileID: 1337631748}
   audioService: {fileID: 1337631747}
 --- !u!114 &1914569264
@@ -6311,6 +6359,7 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1337631750}
+  - {fileID: 1005416910}
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 271414931}

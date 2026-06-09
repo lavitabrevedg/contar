@@ -71,6 +71,11 @@ public class StageSelectPresenter : MonoBehaviour
 
     private void OnContinueClicked()
     {
+        ResolveReferences();
+
+        if (progressService != null)
+            progressService.SelectStageForPlay(progressService.CurrentStageIndex);
+
         PlayUiSound();
         SceneManager.LoadScene(InGameSceneName);
     }
@@ -101,7 +106,7 @@ public class StageSelectPresenter : MonoBehaviour
             return;
 
         if (progressService != null)
-            progressService.SetCurrentStage(stageIndex);
+            progressService.SelectStageForPlay(stageIndex);
 
         PlayUiSound();
         SceneManager.LoadScene(InGameSceneName);

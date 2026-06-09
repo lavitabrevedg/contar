@@ -11,11 +11,18 @@ public class SettingsView : MonoBehaviour
     [SerializeField] private Button soundButton;
     [SerializeField] private Button resetProgressButton;
     [SerializeField] private TMP_Text soundButtonText;
+    [SerializeField] private bool hidePanelOnAwake = true;
 
     public event Action OpenClicked;
     public event Action CloseClicked;
     public event Action SoundClicked;
     public event Action ResetProgressClicked;
+
+    private void Awake()
+    {
+        if (hidePanelOnAwake)
+            SetPanelVisible(false);
+    }
 
     private void OnEnable()
     {

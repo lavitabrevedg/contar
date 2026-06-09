@@ -1,71 +1,288 @@
-using Firebase;
+Ôªøusing Firebase;
 using Firebase.Auth;
 using Firebase.Database;
+using Firebase.Extensions;
 using UnityEngine;
-public partial class Firebase_Manager
+using UnityEngine.SceneManagement;
+
+public partial class Firebase_Manager : MonoBehaviour
 {
-    // ∆ƒ¿ÃæÓ∫£¿ÃΩ∫ ¿Œ¡ı ∞¥√º
+    public static Firebase_Manager Instance { get; private set; }
+
+    [SerializeField] private StageProgressService progressService;
+    [SerializeField] private bool readDataOnLogin = true;
+    [SerializeField] private bool writeDataOnProgressChanged = true;
+
+    // ÌååÏù¥Ïñ¥Î≤†Ïù¥Ïä§ Ïù∏Ï¶ù Í∞ùÏ≤¥
     private FirebaseAuth auth;
-    //«ˆ¿Á ∑Œ±◊¿Œ«— ªÁøÎ¿⁄ ∞¥√º
+    //ÌòÑÏû¨ Î°úÍ∑∏Ïù∏Ìïú ÏÇ¨Ïö©Ïûê Í∞ùÏ≤¥
     private FirebaseUser currentUser;
-    // ∆ƒ¿ÃæÓ∫£¿ÃΩ∫ µ•¿Ã≈Õ∫£¿ÃΩ∫ ¬¸¡∂ ∞¥√º
-    public DatabaseReference reference;
+    // ÌååÏù¥Ïñ¥Î≤†Ïù¥Ïä§ Îç∞Ïù¥ÌÑ∞Î≤†Ïù¥Ïä§ Ï∞∏Ï°∞ Í∞ùÏ≤¥
+    private DatabaseReference reference;
+    private DatabaseReference userProgressReference;
+    private bool isInitialized;
+    private bool isProgressChangedSubscribed;
+    private bool isApplyingRemoteProgress;
 
-    public void Init()
+    public DatabaseReference Reference => reference;
+
+    private void Awake()
     {
-        // Firebase SDK¿« ∏µÁ « ºˆ ±∏º∫ø‰º“∞° ¿÷¥¬¡ˆ »Æ¿Œ«œ∞Ì æ¯¿∏∏È ºˆ¡§
-        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
+        if (Instance != null && Instance != this)
         {
-            if (task.Result == DependencyStatus.Available)
-            {
-                // ∆ƒ¿ÃæÓ∫£¿ÃΩ∫ ¿Œ¡ı ∞¥√º √ ±‚»≠
-                auth = FirebaseAuth.DefaultInstance;
-                // «ˆ¿Á ∑Œ±◊¿Œ«— ªÁøÎ¿⁄ ∞¥√º √ ±‚»≠
-                currentUser = auth.CurrentUser;
-                // ∆ƒ¿ÃæÓ∫£¿ÃΩ∫ µ•¿Ã≈Õ∫£¿ÃΩ∫ ¬¸¡∂ ∞¥√º √ ±‚»≠
-                reference = FirebaseDatabase.DefaultInstance.RootReference;
-
-                GuestLogin();
-                Debug.Log("Firebase √ ±‚»≠ º∫∞¯!");
-            }
-            else
-            {
-                Debug.Log("Firebase √ ±‚»≠ Ω«∆–: " + task.Exception.ToString());
-            }
-        });
-    }
-
-    public void GuestLogin() //∞‘Ω∫∆Æ ∑Œ±◊¿Œ
-    {
-        if(auth.CurrentUser != null)
-        {
-            Debug.Log("¿ÃπÃ ∑Œ±◊¿Œ ªÛ≈¬¿‘¥œ¥Ÿ. : " + auth.CurrentUser.UserId);
-            //ReadData();
+            Destroy(this);
             return;
         }
 
-        auth.SignInAnonymouslyAsync().ContinueWith(task =>
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        ResolveProgressService();
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void Start()
+    {
+        Init();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance != this)
+            return;
+
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
+        if (progressService != null && isProgressChangedSubscribed)
+            progressService.PersistentProgressChanged -= OnProgressChanged;
+
+        Instance = null;
+    }
+
+    public void Init()
+    {
+        // Firebase SDKÏùò Î™®Îì† ÌïÑÏàò Íµ¨ÏÑ±ÏöîÏÜåÍ∞Ä ÏûàÎäîÏßÄ ÌôïÏù∏ÌïòÍ≥† ÏóÜÏúºÎ©¥ ÏàòÏ†ï
+        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsCanceled || task.IsFaulted)
             {
-                Debug.Log("∞‘Ω∫∆Æ ∑Œ±◊¿Œ Ω«∆–: " + task.Exception);
+                Debug.LogError("[Firebase_Manager] Firebase Ï¥àÍ∏∞Ìôî Ïã§Ìå®: " + task.Exception);
                 return;
             }
 
-            FirebaseUser user = task.Result.User;
-            // Unique ID
-            Debug.Log("∞‘Ω∫∆Æ ∑Œ±◊¿Œ º∫∞¯! ªÁøÎ¿⁄ ID : " + user.UserId);
-            //ReadData();
+            if (task.Result != DependencyStatus.Available)
+            {
+                Debug.LogError("[Firebase_Manager] Firebase ÏùòÏ°¥ÏÑ± ÏÇ¨Ïö© Î∂àÍ∞Ä: " + task.Result);
+                return;
+            }
+
+            // ÌååÏù¥Ïñ¥Î≤†Ïù¥Ïä§ Ïù∏Ï¶ù Í∞ùÏ≤¥ Ï¥àÍ∏∞Ìôî
+            auth = FirebaseAuth.DefaultInstance;
+            // ÌòÑÏû¨ Î°úÍ∑∏Ïù∏Ìïú ÏÇ¨Ïö©Ïûê Í∞ùÏ≤¥ Ï¥àÍ∏∞Ìôî
+            currentUser = auth.CurrentUser;
+            // ÌååÏù¥Ïñ¥Î≤†Ïù¥Ïä§ Îç∞Ïù¥ÌÑ∞Î≤†Ïù¥Ïä§ Ï∞∏Ï°∞ Í∞ùÏ≤¥ Ï¥àÍ∏∞Ìôî
+            reference = FirebaseDatabase.DefaultInstance.RootReference;
+            isInitialized = true;
+
+            GuestLogin();
+            Debug.Log("[Firebase_Manager] Firebase Ï¥àÍ∏∞Ìôî ÏÑ±Í≥µ!");
         });
     }
 
-    private void ReadData()
+    public void GuestLogin() //Í≤åÏä§Ìä∏ Î°úÍ∑∏Ïù∏
     {
+        if (!isInitialized)
+            return;
 
+        if (auth.CurrentUser != null)
+        {
+            currentUser = auth.CurrentUser;
+            PrepareUserProgressReference();
+
+            Debug.Log("[Firebase_Manager] Ïù¥ÎØ∏ Î°úÍ∑∏Ïù∏ ÏÉÅÌÉúÏûÖÎãàÎã§. : " + currentUser.UserId);
+
+            if (readDataOnLogin)
+                ReadData();
+
+            return;
+        }
+
+        auth.SignInAnonymouslyAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCanceled || task.IsFaulted)
+            {
+                Debug.LogError("[Firebase_Manager] Í≤åÏä§Ìä∏ Î°úÍ∑∏Ïù∏ Ïã§Ìå®: " + task.Exception);
+                return;
+            }
+
+            currentUser = task.Result.User;
+            PrepareUserProgressReference();
+
+            // Unique ID
+            Debug.Log("[Firebase_Manager] Í≤åÏä§Ìä∏ Î°úÍ∑∏Ïù∏ ÏÑ±Í≥µ! ÏÇ¨Ïö©Ïûê ID : " + currentUser.UserId);
+
+            if (readDataOnLogin)
+                ReadData();
+        });
+    }
+
+    public void ReadData()
+    {
+        if (!CanUseDatabase())
+            return;
+
+        userProgressReference.GetValueAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCanceled || task.IsFaulted)
+            {
+                Debug.LogError("[Firebase_Manager] Îç∞Ïù¥ÌÑ∞ ÏùΩÍ∏∞ Ïã§Ìå®: " + task.Exception);
+                return;
+            }
+
+            DataSnapshot snapshot = task.Result;
+            if (!snapshot.Exists)
+            {
+                WriteData();
+                SubscribeProgressChanged();
+                return;
+            }
+
+            string json = snapshot.GetRawJsonValue();
+            if (string.IsNullOrEmpty(json))
+            {
+                WriteData();
+                SubscribeProgressChanged();
+                return;
+            }
+
+            StageProgressSnapshot remoteProgress = JsonUtility.FromJson<StageProgressSnapshot>(json);
+            StageProgressSnapshot localProgress = progressService.CreateSnapshot();
+
+            if (ShouldUseRemoteProgress(remoteProgress, localProgress))
+            {
+                isApplyingRemoteProgress = true;
+                progressService.ApplySnapshot(remoteProgress);
+                isApplyingRemoteProgress = false;
+            }
+            else
+            {
+                WriteData();
+            }
+
+            SubscribeProgressChanged();
+        });
     }
 
     public void WriteData()
     {
+        if (!CanUseDatabase())
+            return;
 
+        progressService.EnsurePersistentTimestamp();
+        StageProgressSnapshot progress = progressService.CreateSnapshot();
+        string json = JsonUtility.ToJson(progress);
+
+        userProgressReference.SetRawJsonValueAsync(json).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCanceled || task.IsFaulted)
+            {
+                Debug.LogError("[Firebase_Manager] Îç∞Ïù¥ÌÑ∞ Ïì∞Í∏∞ Ïã§Ìå®: " + task.Exception);
+                return;
+            }
+
+            Debug.Log("[Firebase_Manager] Îç∞Ïù¥ÌÑ∞ Ïì∞Í∏∞ ÏÑ±Í≥µ.");
+        });
+    }
+
+    private void PrepareUserProgressReference()
+    {
+        userProgressReference = reference
+            .Child("users")
+            .Child(currentUser.UserId)
+            .Child("progress");
+    }
+
+    private bool CanUseDatabase()
+    {
+        if (!isInitialized)
+            return false;
+
+        if (currentUser == null)
+            return false;
+
+        if (userProgressReference == null)
+            return false;
+
+        ResolveProgressService();
+
+        return progressService != null;
+    }
+
+    private bool ShouldUseRemoteProgress(StageProgressSnapshot remoteProgress, StageProgressSnapshot localProgress)
+    {
+        if (remoteProgress == null)
+            return false;
+
+        if (remoteProgress.highestClearedStageIndex > localProgress.highestClearedStageIndex)
+            return true;
+
+        if (remoteProgress.highestClearedStageIndex < localProgress.highestClearedStageIndex)
+            return false;
+
+        return remoteProgress.updatedAtUtcTicks > localProgress.updatedAtUtcTicks;
+    }
+
+    private void SubscribeProgressChanged()
+    {
+        if (!writeDataOnProgressChanged)
+            return;
+
+        ResolveProgressService();
+
+        if (progressService == null)
+            return;
+
+        if (isProgressChangedSubscribed)
+            return;
+
+        progressService.PersistentProgressChanged += OnProgressChanged;
+        isProgressChangedSubscribed = true;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        ChangeProgressService(FindFirstObjectByType<StageProgressService>());
+
+        if (readDataOnLogin && CanUseDatabase())
+            ReadData();
+    }
+
+    private void ChangeProgressService(StageProgressService nextProgressService)
+    {
+        if (progressService == nextProgressService)
+            return;
+
+        if (progressService != null && isProgressChangedSubscribed)
+            progressService.PersistentProgressChanged -= OnProgressChanged;
+
+        progressService = nextProgressService;
+        isProgressChangedSubscribed = false;
+
+        if (progressService != null)
+            SubscribeProgressChanged();
+    }
+
+    private void OnProgressChanged()
+    {
+        if (isApplyingRemoteProgress)
+            return;
+
+        WriteData();
+    }
+
+    private void ResolveProgressService()
+    {
+        if (progressService == null)
+            progressService = FindFirstObjectByType<StageProgressService>();
     }
 }

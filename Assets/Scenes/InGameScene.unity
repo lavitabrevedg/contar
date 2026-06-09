@@ -449,7 +449,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameUIPresenter
   stateModel: {fileID: 2041801098}
   progressService: {fileID: 1596806941}
-  stageCatalog: {fileID: 0}
+  stageCatalog: {fileID: 11400000, guid: 26ad48a0786b45449c41c984c7f1f92b, type: 2}
   view: {fileID: 150347068}
 --- !u!4 &150347070
 Transform:
@@ -1650,6 +1650,7 @@ MonoBehaviour:
   soundButton: {fileID: 1640916774}
   resetProgressButton: {fileID: 624573011}
   soundButtonText: {fileID: 401634127}
+  hidePanelOnAwake: 1
 --- !u!1 &458373602
 GameObject:
   m_ObjectHideFlags: 0
