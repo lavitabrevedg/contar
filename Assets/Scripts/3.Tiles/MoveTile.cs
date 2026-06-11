@@ -21,7 +21,7 @@ public class MoveTile : BaseTile
 
         IsConsumed = true;
         GameManager.Instance.AddMoveCount(value);
-        SetTileLabel(string.Empty);
+        ClearTileLabelAnimated();
     }
 
     private string FormatValue(int moveValue)

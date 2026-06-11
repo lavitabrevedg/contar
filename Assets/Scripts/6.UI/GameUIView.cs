@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,8 +20,9 @@ public class GameUIView : MonoBehaviour
     [SerializeField] private TMP_Text clearStageText;
     [SerializeField] private TMP_Text clearMoveText;
     [SerializeField] private TMP_Text rewardText;
-    [SerializeField] private TMP_Text failureInfoText;
     [SerializeField] private Button lobbyButton;
+    [SerializeField] private float panelTweenDuration = 0.18f;
+    [SerializeField] private Ease panelEase = Ease.OutBack;
 
     private string retryButtonDefaultLabel;
     private string nextButtonDefaultLabel;
@@ -143,14 +145,6 @@ public class GameUIView : MonoBehaviour
         }
     }
 
-    public void SetFailureInfo(int failureCount, int failureCountForAd)
-    {
-        if (failureInfoText == null)
-            return;
-
-        failureInfoText.text = failureCountForAd <= 0 ? string.Empty : $"실패 {failureCount}/{failureCountForAd}";
-    }
-
     private void ApplySkipButtonState()
     {
         if (skipButton == null) return;
@@ -208,20 +202,35 @@ public class GameUIView : MonoBehaviour
     {
         if (panel == null) return;
 
+        panel.DOKill();
+        panel.transform.DOKill();
+
         panel.gameObject.SetActive(true);
-        panel.alpha = 1f;
-        panel.interactable = true;
+        panel.alpha = 0f;
+        panel.transform.localScale = Vector3.one * 0.96f;
+        panel.interactable = false;
         panel.blocksRaycasts = true;
+
+        panel.DOFade(1f, panelTweenDuration);
+        panel.transform.DOScale(Vector3.one, panelTweenDuration)
+            .SetEase(panelEase)
+            .OnComplete(() => panel.interactable = true);
     }
 
     private void HidePanel(CanvasGroup panel)
     {
         if (panel == null) return;
 
-        panel.alpha = 0f;
+        panel.DOKill();
+        panel.transform.DOKill();
+
         panel.interactable = false;
         panel.blocksRaycasts = false;
-        panel.gameObject.SetActive(false);
+
+        panel.DOFade(0f, panelTweenDuration);
+        panel.transform.DOScale(Vector3.one * 0.98f, panelTweenDuration)
+            .SetEase(Ease.InQuad)
+            .OnComplete(() => panel.gameObject.SetActive(false));
     }
 
     private void CacheButtonLabels()

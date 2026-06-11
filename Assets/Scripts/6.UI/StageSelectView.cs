@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -13,6 +14,7 @@ public class StageSelectView : MonoBehaviour
     [SerializeField] private TMP_Text currentStageText;
     [SerializeField] private Button[] stageButtons;
     [SerializeField] private TMP_Text[] stageButtonTexts;
+    [SerializeField] private float panelTweenDuration = 0.18f;
 
     private UnityAction[] stageButtonHandlers;
 
@@ -54,10 +56,31 @@ public class StageSelectView : MonoBehaviour
         if (panel == null)
             return;
 
-        panel.gameObject.SetActive(isVisible);
-        panel.alpha = isVisible ? 1f : 0f;
-        panel.interactable = isVisible;
-        panel.blocksRaycasts = isVisible;
+        panel.DOKill();
+        panel.transform.DOKill();
+
+        if (isVisible)
+        {
+            panel.gameObject.SetActive(true);
+            panel.alpha = 0f;
+            panel.transform.localScale = Vector3.one * 0.96f;
+            panel.interactable = false;
+            panel.blocksRaycasts = true;
+
+            panel.DOFade(1f, panelTweenDuration);
+            panel.transform.DOScale(Vector3.one, panelTweenDuration)
+                .SetEase(Ease.OutBack)
+                .OnComplete(() => panel.interactable = true);
+            return;
+        }
+
+        panel.interactable = false;
+        panel.blocksRaycasts = false;
+
+        panel.DOFade(0f, panelTweenDuration);
+        panel.transform.DOScale(Vector3.one * 0.98f, panelTweenDuration)
+            .SetEase(Ease.InQuad)
+            .OnComplete(() => panel.gameObject.SetActive(false));
     }
 
     public void SetCurrentStageText(int currentStageIndex, int stageCount)

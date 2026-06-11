@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 public class MapGenerator : MonoBehaviour
@@ -16,6 +17,7 @@ public class MapGenerator : MonoBehaviour
 
     [Header("Grid Settings")]
     public float tileSize = 1f;
+    [SerializeField] private float tileMoveDuration = 0.12f;
 
     private BaseTile[,] _grid;
 
@@ -108,8 +110,24 @@ public class MapGenerator : MonoBehaviour
         _grid[a.x, a.y] = tileB;
         _grid[b.x, b.y] = tileA;
 
-        if (tileA != null) tileA.transform.position = GridToWorld(b.x, b.y);
-        if (tileB != null) tileB.transform.position = GridToWorld(a.x, a.y);
+        MoveTileTransform(tileA, GridToWorld(b.x, b.y));
+        MoveTileTransform(tileB, GridToWorld(a.x, a.y));
+    }
+
+    private void MoveTileTransform(BaseTile tile, Vector3 targetPosition)
+    {
+        if (tile == null)
+            return;
+
+        tile.transform.DOKill();
+
+        if (tile is NumberObstacle)
+        {
+            tile.transform.DOMove(targetPosition, tileMoveDuration).SetEase(Ease.OutQuad);
+            return;
+        }
+
+        tile.transform.position = targetPosition;
     }
 
     private BaseTile CreateTile(int x, int y, SerializedTile tileData)

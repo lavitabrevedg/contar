@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /c/Fork/contar -name *.cs -type f)",
-      "Bash(xargs grep:*)"
-    ]
-  }
-}

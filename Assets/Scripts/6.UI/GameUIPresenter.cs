@@ -145,7 +145,6 @@ public class GameUIPresenter : MonoBehaviour
         view.SetNextStageAvailable(hasNextStage);
         view.SetRetryButtonLabel(retryLabel);
         view.SetSkipButtonState(isAdRequired, hasAdSkipTicket, skipLabel);
-        view.SetFailureInfo(progressService.FailureCount, progressService.FailureCountForAdValue);
     }
 
     private void OnMoveCountChanged(int moveCount)

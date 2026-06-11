@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 using TMPro;
 
@@ -19,6 +20,38 @@ public abstract class BaseTile : MonoBehaviour
         bool hasText = !string.IsNullOrWhiteSpace(text);
         labelText.gameObject.SetActive(hasText);
         labelText.text = hasText ? text : string.Empty;
+    }
+
+    protected void ClearTileLabelAnimated()
+    {
+        EnsureLabelText();
+
+        if (labelText == null)
+            return;
+
+        labelText.transform.DOKill();
+        labelText.DOKill();
+
+        Vector3 startPosition = labelText.transform.localPosition;
+        Color startColor = labelText.color;
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.Join(labelText.transform.DOLocalMoveY(startPosition.y + 0.15f, 0.16f));
+        sequence.Join(labelText.DOFade(0f, 0.16f));
+        sequence.OnComplete(() =>
+        {
+            labelText.text = string.Empty;
+            labelText.gameObject.SetActive(false);
+            labelText.transform.localPosition = startPosition;
+            labelText.color = startColor;
+        });
+    }
+
+    public void PlayBlockedFeedback()
+    {
+        transform.DOKill();
+        transform.DOShakePosition(0.18f, 0.08f, 12, 90f)
+            .SetEase(Ease.OutQuad);
     }
 
     private void EnsureLabelText()

@@ -19,6 +19,7 @@ public class ExitTile : BaseTile
             return;
         }
 
+        PlayBlockedFeedback();
         GameManager.Instance.NotifyExitBlocked(condition);
     }
 
