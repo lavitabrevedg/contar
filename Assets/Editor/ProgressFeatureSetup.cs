@@ -5,7 +5,7 @@ using UnityEngine;
 
 public static class ProgressFeatureSetup
 {
-    private const string StagesFolder = "Assets/Scripts/2.Data/Stages";
+    private const string StagesFolder = "Assets/Data/Stages";
     private const string ResourcesFolder = "Assets/Resources";
     private const string CatalogPath = "Assets/Resources/StageCatalog.asset";
 

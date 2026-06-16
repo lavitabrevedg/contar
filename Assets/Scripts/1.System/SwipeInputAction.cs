@@ -5,49 +5,49 @@ public class SwipeInputAction : MonoBehaviour
 {
     [SerializeField] private float minSwipeDistance = 50f;
 
-    private InputAction _pressAction;
-    private InputAction _positionAction;
+    private InputAction pressAction;
+    private InputAction positionAction;
 
-    private Vector2 _startScreenPos;
-    private bool _isPressed;
+    private Vector2 startScreenPos;
+    private bool isPressed;
 
     private void OnEnable()
     {
-        _pressAction = new InputAction("Press", binding: "<Pointer>/press");
-        _positionAction = new InputAction("Position", binding: "<Pointer>/position");
+        pressAction = new InputAction("Press", binding: "<Pointer>/press");
+        positionAction = new InputAction("Position", binding: "<Pointer>/position");
 
-        _pressAction.started += OnPressStarted;
-        _pressAction.canceled += OnPressCanceled;
+        pressAction.started += OnPressStarted;
+        pressAction.canceled += OnPressCanceled;
 
-        _pressAction.Enable();
-        _positionAction.Enable();
+        pressAction.Enable();
+        positionAction.Enable();
     }
 
     private void OnDisable()
     {
-        _pressAction.started -= OnPressStarted;
-        _pressAction.canceled -= OnPressCanceled;
+        pressAction.started -= OnPressStarted;
+        pressAction.canceled -= OnPressCanceled;
 
-        _pressAction.Disable();
-        _positionAction.Disable();
+        pressAction.Disable();
+        positionAction.Disable();
 
-        _pressAction.Dispose();
-        _positionAction.Dispose();
+        pressAction.Dispose();
+        positionAction.Dispose();
     }
 
     private void OnPressStarted(InputAction.CallbackContext context)
     {
-        _startScreenPos = _positionAction.ReadValue<Vector2>();
-        _isPressed = true;
+        startScreenPos = positionAction.ReadValue<Vector2>();
+        isPressed = true;
     }
 
     private void OnPressCanceled(InputAction.CallbackContext context)
     {
-        if (!_isPressed) return;
-        _isPressed = false;
+        if (!isPressed) return;
+        isPressed = false;
 
-        Vector2 endScreenPos = _positionAction.ReadValue<Vector2>();
-        Vector2 delta = endScreenPos - _startScreenPos;
+        Vector2 endScreenPos = positionAction.ReadValue<Vector2>();
+        Vector2 delta = endScreenPos - startScreenPos;
 
         if (delta.magnitude < minSwipeDistance) return;
 

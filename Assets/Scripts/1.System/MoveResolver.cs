@@ -37,11 +37,11 @@ public struct MoveResult
 /// </summary>
 public class MoveResolver
 {
-    private readonly MapGenerator _mapGenerator;
+    private readonly MapGenerator mapGenerator;
 
     public MoveResolver(MapGenerator mapGenerator)
     {
-        _mapGenerator = mapGenerator;
+        this.mapGenerator = mapGenerator;
     }
 
     public MoveResult Resolve(Vector2Int currentPos, Vector2Int direction, int currentMoveCount)
@@ -50,7 +50,7 @@ public class MoveResolver
             return MoveResult.Blocked("이동 횟수 부족");
 
         Vector2Int targetGrid = currentPos + direction;
-        BaseTile targetTile = _mapGenerator.GetTile(targetGrid.x, targetGrid.y);
+        BaseTile targetTile = mapGenerator.GetTile(targetGrid.x, targetGrid.y);
 
         if (targetTile == null)
             return MoveResult.Blocked("맵 바깥");
@@ -62,7 +62,7 @@ public class MoveResolver
         if (targetTile is NumberObstacle obstacle)
         {
             Vector2Int behindPos = targetGrid + direction;
-            BaseTile behindTile = _mapGenerator.GetTile(behindPos.x, behindPos.y);
+            BaseTile behindTile = mapGenerator.GetTile(behindPos.x, behindPos.y);
 
             if (behindTile == null)
                 return MoveResult.Blocked("장애물을 맵 바깥으로 밀 수 없음");

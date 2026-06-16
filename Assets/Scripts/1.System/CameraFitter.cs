@@ -22,8 +22,8 @@ public class CameraFitter : MonoBehaviour
     [Tooltip("How far below the map center the camera sits before looking back at the board.")]
     [SerializeField] private float viewTiltYOffset = 4f;
 
-    private int _lastScreenWidth;
-    private int _lastScreenHeight;
+    private int lastScreenWidth;
+    private int lastScreenHeight;
 
     private void Awake()
     {
@@ -34,7 +34,7 @@ public class CameraFitter : MonoBehaviour
     private void Update()
     {
         // 기기 회전/해상도 변경 대응
-        if (Screen.width != _lastScreenWidth || Screen.height != _lastScreenHeight)
+        if (Screen.width != lastScreenWidth || Screen.height != lastScreenHeight)
         {
             Fit();
         }
@@ -68,7 +68,7 @@ public class CameraFitter : MonoBehaviour
         targetCamera.transform.position = cameraPos;
         targetCamera.transform.rotation = Quaternion.LookRotation(focusPos - cameraPos, Vector3.up);
 
-        _lastScreenWidth = Screen.width;
-        _lastScreenHeight = Screen.height;
+        lastScreenWidth = Screen.width;
+        lastScreenHeight = Screen.height;
     }
 }

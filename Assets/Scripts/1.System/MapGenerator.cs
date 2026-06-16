@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class MapGenerator : MonoBehaviour
 {
@@ -13,13 +14,14 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] private GameObject movePrefab;
     [SerializeField] private GameObject numberObstaclePrefab;
     [SerializeField] private GameObject wallPrefab;
-    [SerializeField] private GameObject PlayerPrefab;
+    [FormerlySerializedAs("PlayerPrefab")]
+    [SerializeField] private GameObject playerPrefab;
 
     [Header("Grid Settings")]
     public float tileSize = 1f;
     [SerializeField] private float tileMoveDuration = 0.12f;
 
-    private BaseTile[,] _grid;
+    private BaseTile[,] grid;
 
     private void Start()
     {
@@ -50,7 +52,7 @@ public class MapGenerator : MonoBehaviour
             return;
         }
 
-        _grid = new BaseTile[mapData.width, mapData.height];
+        grid = new BaseTile[mapData.width, mapData.height];
 
         for (int y = 0; y < mapData.height; y++)
         {
@@ -74,7 +76,7 @@ public class MapGenerator : MonoBehaviour
         for (int i = transform.childCount - 1; i >= 0; i--)
             DestroyImmediate(transform.GetChild(i).gameObject);
 
-        _grid = null;
+        grid = null;
     }
 
     public Vector3 GridToWorld(int x, int y)
@@ -91,24 +93,20 @@ public class MapGenerator : MonoBehaviour
 
     public BaseTile GetTile(int x, int y)
     {
-        if (_grid == null || x < 0 || y < 0 || x >= mapData.width || y >= mapData.height)
+        if (grid == null || x < 0 || y < 0 || x >= mapData.width || y >= mapData.height)
             return null;
-        return _grid[x, y];
+        return grid[x, y];
     }
 
-    /// <summary>
-    /// 두 셀의 타일을 맞바꾼다. _grid 참조 교환 + 각 타일의 transform.position 갱신.
-    /// 장애물 밀기 같은 "위치 교환" 동작에 사용.
-    /// </summary>
     public void SwapTiles(Vector2Int a, Vector2Int b)
     {
-        if (_grid == null) return;
+        if (grid == null) return;
 
-        BaseTile tileA = _grid[a.x, a.y];
-        BaseTile tileB = _grid[b.x, b.y];
+        BaseTile tileA = grid[a.x, a.y];
+        BaseTile tileB = grid[b.x, b.y];
 
-        _grid[a.x, a.y] = tileB;
-        _grid[b.x, b.y] = tileA;
+        grid[a.x, a.y] = tileB;
+        grid[b.x, b.y] = tileA;
 
         MoveTileTransform(tileA, GridToWorld(b.x, b.y));
         MoveTileTransform(tileB, GridToWorld(a.x, a.y));
@@ -141,7 +139,7 @@ public class MapGenerator : MonoBehaviour
 
         BaseTile tile = go.GetComponent<BaseTile>();
         tile.Init(tileData);
-        _grid[x, y] = tile;
+        grid[x, y] = tile;
 
         if (tileData.type == TileType.Start)
         {
@@ -167,11 +165,11 @@ public class MapGenerator : MonoBehaviour
 
     private void CreatePlayer(int gridX, int gridY)
     {
-        if (PlayerPrefab == null) return;
+        if (playerPrefab == null) return;
         if (GameManager.Instance == null) return;
 
         Vector3 spawnPos = GridToWorld(gridX, gridY);
-        GameObject playerGO = Instantiate(PlayerPrefab, spawnPos, Quaternion.identity, transform);
+        GameObject playerGO = Instantiate(playerPrefab, spawnPos, Quaternion.identity, transform);
 
         PlayerController controller = playerGO.GetComponent<PlayerController>();
         if (controller == null) return;

@@ -1,12 +1,13 @@
 #if UNITY_EDITOR
-using UnityEngine;
-using UnityEditor;
 using System.IO;
+using UnityEditor;
+using UnityEngine;
 
 public class StageDataImporter : Editor
 {
-    private const string JsonPath    = "Assets/Scripts/2.Data/Stages/stages.json";
-    private const string OutputPath  = "Assets/Scripts/2.Data/Stages";
+    private const string JsonPath = "Assets/Data/Stages/stages.json";
+    private const string OutputPath = "Assets/Data/Stages";
+    private const string DataFolder = "Data";
     private const string OutputFolder = "Stages";
 
     [MenuItem("contar/Import Stages from JSON")]
@@ -28,10 +29,10 @@ public class StageDataImporter : Editor
             return;
         }
 
-        if (!AssetDatabase.IsValidFolder(OutputPath))
-            AssetDatabase.CreateFolder("Assets/Scripts/2.Data", OutputFolder);
+        EnsureOutputFolder();
 
-        int created = 0, updated = 0;
+        int created = 0;
+        int updated = 0;
 
         foreach (StageJson stageJson in collection.stages)
         {
@@ -59,23 +60,31 @@ public class StageDataImporter : Editor
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        string msg = $"{created}개 생성, {updated}개 업데이트 완료.";
-        Debug.Log($"[StageDataImporter] {msg}");
+        string message = $"{created}개 생성, {updated}개 업데이트 완료.";
+        Debug.Log($"[StageDataImporter] {message}");
 
         if (!Application.isBatchMode)
-            EditorUtility.DisplayDialog("스테이지 임포트 완료", msg, "확인");
+            EditorUtility.DisplayDialog("스테이지 임포트 완료", message, "확인");
+    }
+
+    private static void EnsureOutputFolder()
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/Data"))
+            AssetDatabase.CreateFolder("Assets", DataFolder);
+
+        if (!AssetDatabase.IsValidFolder(OutputPath))
+            AssetDatabase.CreateFolder("Assets/Data", OutputFolder);
     }
 
     private static void ApplyStageJson(MapData map, StageJson stageJson)
     {
-        map.width          = stageJson.width;
-        map.height         = stageJson.height;
+        map.width = stageJson.width;
+        map.height = stageJson.height;
         map.startMoveCount = stageJson.startMoveCount;
-        map.rows           = new Wrapper<SerializedTile>[stageJson.height];
+        map.rows = new Wrapper<SerializedTile>[stageJson.height];
 
         for (int jsonRow = 0; jsonRow < stageJson.height; jsonRow++)
         {
-            // JSON rows[0]이 맵 상단 → MapData rows[height-1]에 대응
             int mapRow = stageJson.height - 1 - jsonRow;
             map.rows[mapRow] = new Wrapper<SerializedTile>();
             map.rows[mapRow].values = new SerializedTile[stageJson.width];
@@ -89,17 +98,16 @@ public class StageDataImporter : Editor
         }
     }
 
-    // 타일 토큰 형식: E / S / W / X / X:O / X:V / M:값 / N:값
     private static SerializedTile ParseTile(string token)
     {
         SerializedTile tile = default;
         if (string.IsNullOrEmpty(token) || token == "E")
             return tile;
 
-        string[] parts   = token.Split(':');
-        string   typeStr = parts[0];
+        string[] parts = token.Split(':');
+        string typeText = parts[0];
 
-        switch (typeStr)
+        switch (typeText)
         {
             case "S":
                 tile.type = TileType.Start;
@@ -143,10 +151,10 @@ class StageCollection
 [System.Serializable]
 class StageJson
 {
-    public string   name;
-    public int      width;
-    public int      height;
-    public int      startMoveCount;
+    public string name;
+    public int width;
+    public int height;
+    public int startMoveCount;
     public string[] rows;
 }
 #endif

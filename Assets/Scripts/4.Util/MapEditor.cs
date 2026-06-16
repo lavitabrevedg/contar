@@ -5,8 +5,8 @@ using UnityEditor;
 [CustomEditor(typeof(MapData))]
 public class MapEditor : Editor
 {
-    private int _selectedX = -1;
-    private int _selectedY = -1;
+    private int selectedX = -1;
+    private int selectedY = -1;
 
     public override void OnInspectorGUI()
     {
@@ -23,8 +23,8 @@ public class MapEditor : Editor
         if (GUILayout.Button("Apply Grid Size"))
         {
             map.ResetGrid();
-            _selectedX = -1;
-            _selectedY = -1;
+            selectedX = -1;
+            selectedY = -1;
             EditorUtility.SetDirty(map);
             AssetDatabase.SaveAssetIfDirty(map);
         }
@@ -48,7 +48,7 @@ public class MapEditor : Editor
                 if (map.rows[y] == null || map.rows[y].values == null) continue;
 
                 SerializedTile tile = map.rows[y].values[x];
-                bool isSelected = _selectedX == x && _selectedY == y;
+                bool isSelected = selectedX == x && selectedY == y;
 
                 Color prev = GUI.backgroundColor;
                 GUI.backgroundColor = isSelected ? Color.magenta : GetTileColor(tile.type);
@@ -64,8 +64,8 @@ public class MapEditor : Editor
                     }
                     else
                     {
-                        _selectedX = x;
-                        _selectedY = y;
+                        selectedX = x;
+                        selectedY = y;
                     }
                 }
 
@@ -77,13 +77,13 @@ public class MapEditor : Editor
 
     private void DrawSelectedTileInfo(MapData map)
     {
-        if (_selectedX < 0 || _selectedY < 0) return;
-        if (map.rows[_selectedY] == null || map.rows[_selectedY].values == null) return;
+        if (selectedX < 0 || selectedY < 0) return;
+        if (map.rows[selectedY] == null || map.rows[selectedY].values == null) return;
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField($"Selected Tile ({_selectedX}, {_selectedY})", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField($"Selected Tile ({selectedX}, {selectedY})", EditorStyles.boldLabel);
 
-        SerializedTile tile = map.rows[_selectedY].values[_selectedX];
+        SerializedTile tile = map.rows[selectedY].values[selectedX];
 
         EditorGUI.BeginChangeCheck();
 
@@ -97,7 +97,7 @@ public class MapEditor : Editor
 
         if (EditorGUI.EndChangeCheck())
         {
-            map.rows[_selectedY].values[_selectedX] = tile;
+            map.rows[selectedY].values[selectedX] = tile;
             EditorUtility.SetDirty(map);
             AssetDatabase.SaveAssetIfDirty(map);
         }
