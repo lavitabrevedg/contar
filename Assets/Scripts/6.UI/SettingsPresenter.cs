@@ -4,7 +4,6 @@ public class SettingsPresenter : MonoBehaviour
 {
     [SerializeField] private SettingsView view;
     [SerializeField] private SettingsService settingsService;
-    [SerializeField] private StageProgressService progressService;
     [SerializeField] private AudioService audioService;
 
     private void Awake()
@@ -31,9 +30,6 @@ public class SettingsPresenter : MonoBehaviour
         if (settingsService == null)
             settingsService = FindFirstObjectByType<SettingsService>();
 
-        if (progressService == null)
-            progressService = FindFirstObjectByType<StageProgressService>();
-
         if (audioService == null)
             audioService = FindFirstObjectByType<AudioService>();
     }
@@ -47,12 +43,10 @@ public class SettingsPresenter : MonoBehaviour
         view.OpenClicked -= OnOpenClicked;
         view.CloseClicked -= OnCloseClicked;
         view.SoundClicked -= OnSoundClicked;
-        view.ResetProgressClicked -= OnResetProgressClicked;
 
         view.OpenClicked += OnOpenClicked;
         view.CloseClicked += OnCloseClicked;
         view.SoundClicked += OnSoundClicked;
-        view.ResetProgressClicked += OnResetProgressClicked;
 
         if (settingsService != null)
         {
@@ -74,7 +68,6 @@ public class SettingsPresenter : MonoBehaviour
         view.OpenClicked -= OnOpenClicked;
         view.CloseClicked -= OnCloseClicked;
         view.SoundClicked -= OnSoundClicked;
-        view.ResetProgressClicked -= OnResetProgressClicked;
 
         if (settingsService != null)
             settingsService.SettingsChanged -= Refresh;
@@ -107,18 +100,6 @@ public class SettingsPresenter : MonoBehaviour
             return;
 
         settingsService.SetSoundEnabled(!settingsService.IsSoundEnabled);
-        if (audioService != null)
-            audioService.PlayUi();
-
-        Refresh();
-    }
-
-    private void OnResetProgressClicked()
-    {
-        ResolveReferences();
-        if (progressService != null)
-            progressService.ResetProgress();
-
         if (audioService != null)
             audioService.PlayUi();
 

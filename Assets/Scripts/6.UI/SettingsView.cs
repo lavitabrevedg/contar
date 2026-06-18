@@ -10,7 +10,6 @@ public class SettingsView : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private Button soundButton;
-    [SerializeField] private Button resetProgressButton;
     [SerializeField] private TMP_Text soundButtonText;
     [SerializeField] private bool hidePanelOnAwake = true;
     [SerializeField] private float panelTweenDuration = 0.18f;
@@ -18,7 +17,6 @@ public class SettingsView : MonoBehaviour
     public event Action OpenClicked;
     public event Action CloseClicked;
     public event Action SoundClicked;
-    public event Action ResetProgressClicked;
 
     private void Awake()
     {
@@ -36,9 +34,6 @@ public class SettingsView : MonoBehaviour
 
         if (soundButton != null)
             soundButton.onClick.AddListener(NotifySoundClicked);
-
-        if (resetProgressButton != null)
-            resetProgressButton.onClick.AddListener(NotifyResetProgressClicked);
     }
 
     private void OnDisable()
@@ -51,9 +46,6 @@ public class SettingsView : MonoBehaviour
 
         if (soundButton != null)
             soundButton.onClick.RemoveListener(NotifySoundClicked);
-
-        if (resetProgressButton != null)
-            resetProgressButton.onClick.RemoveListener(NotifyResetProgressClicked);
     }
 
     public void SetPanelVisible(bool isVisible)
@@ -107,10 +99,5 @@ public class SettingsView : MonoBehaviour
     private void NotifySoundClicked()
     {
         SoundClicked?.Invoke();
-    }
-
-    private void NotifyResetProgressClicked()
-    {
-        ResetProgressClicked?.Invoke();
     }
 }
