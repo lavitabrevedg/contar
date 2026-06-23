@@ -83,7 +83,7 @@ public class SettingsView : MonoBehaviour
     public void SetSoundEnabled(bool isEnabled)
     {
         if (soundButtonText != null)
-            soundButtonText.text = isEnabled ? "사운드 켜짐" : "사운드 꺼짐";
+            soundButtonText.text = isEnabled ? "Sound On" : "Sound Off";
     }
 
     private void NotifyOpenClicked()

@@ -6,6 +6,7 @@ public class MapGenerator : MonoBehaviour
 {
     [Header("Map Settings")]
     public MapData mapData;
+    [SerializeField] private CameraFitter cameraFitter;
 
     [Header("Tile Prefabs")]
     [SerializeField] private GameObject emptyPrefab;
@@ -65,10 +66,9 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        // 맵 생성 후 카메라를 맵 크기에 맞춰 조정
-        CameraFitter fitter = FindFirstObjectByType<CameraFitter>();
-        if (fitter != null)
-            fitter.Fit();
+        // 맵 생성 후 카메라와 배경을 맵 크기에 맞춰 조정
+        if (cameraFitter != null)
+            cameraFitter.Fit();
     }
 
     public void ClearMap()

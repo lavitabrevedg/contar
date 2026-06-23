@@ -6,6 +6,7 @@ public class CameraFitter : MonoBehaviour
     [Header("References")]
     [SerializeField] private MapGenerator mapGenerator;
     [SerializeField] private Camera targetCamera;
+    [SerializeField] private BackgroundFitter backgroundFitter;
 
     [Header("Settings")]
     [SerializeField] private float padding = 1f;
@@ -70,5 +71,8 @@ public class CameraFitter : MonoBehaviour
 
         lastScreenWidth = Screen.width;
         lastScreenHeight = Screen.height;
+
+        if (backgroundFitter != null)
+            backgroundFitter.Fit();
     }
 }

@@ -6,11 +6,14 @@ using UnityEngine.UI;
 
 public class GameUIView : MonoBehaviour
 {
+    private const float PrimaryButtonY = -159.3f;
+    private const float SecondaryButtonY = -353.3f;
+    private const float TertiaryButtonY = -547.3f;
+
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private TMP_Text stageText;
     [SerializeField] private TMP_Text skipTicketText;
     [SerializeField] private CanvasGroup clearPanel;
-    [SerializeField] private CanvasGroup failPanel;
     [SerializeField] private Button retryButton;
     [SerializeField] private Button nextButton;
     [SerializeField] private Button skipButton;
@@ -26,9 +29,10 @@ public class GameUIView : MonoBehaviour
 
     private string retryButtonDefaultLabel;
     private string nextButtonDefaultLabel;
+    private bool isShowingFailResult;
     private bool skipButtonShouldBeVisible = true;
     private bool skipButtonShouldInteract;
-    private string skipButtonLabel = "스킵권 없음";
+    private string skipButtonLabel = "No Skip Tickets";
 
     public event Action RetryClicked;
     public event Action NextClicked;
@@ -85,18 +89,18 @@ public class GameUIView : MonoBehaviour
 
         if (stageCount <= 0)
         {
-            stageText.text = "스테이지 -";
+            stageText.text = "Stage -";
             return;
         }
 
-        stageText.text = $"스테이지 {stageNumber}/{stageCount}";
+        stageText.text = $"Stage {stageNumber}/{stageCount}";
     }
 
     public void SetSkipTicketCount(int skipTicketCount, int maxSkipTicketCount)
     {
         if (skipTicketText == null) return;
 
-        skipTicketText.text = $"스킵권 {skipTicketCount}/{maxSkipTicketCount}";
+        skipTicketText.text = $"Skip Ticket {skipTicketCount}/{maxSkipTicketCount}";
     }
 
     public void SetNextStageAvailable(bool isAvailable)
@@ -107,7 +111,7 @@ public class GameUIView : MonoBehaviour
             nextButton.interactable = isAvailable;
 
         if (nextButtonText != null)
-            nextButtonText.text = isAvailable ? nextButtonDefaultLabel : "마지막";
+            nextButtonText.text = isAvailable ? nextButtonDefaultLabel : "Last";
     }
 
     public void SetRetryButtonLabel(string label)
@@ -121,8 +125,6 @@ public class GameUIView : MonoBehaviour
 
     public void SetSkipButtonState(bool isVisible, bool isInteractable, string label)
     {
-        if (skipButton == null) return;
-
         skipButtonShouldBeVisible = isVisible;
         skipButtonShouldInteract = isInteractable;
         skipButtonLabel = label;
@@ -133,15 +135,15 @@ public class GameUIView : MonoBehaviour
     public void SetClearResult(int stageNumber, int remainingMoveCount, bool grantedSkipTicket, int skipTicketCount)
     {
         if (clearStageText != null)
-            clearStageText.text = $"스테이지 {stageNumber} 클리어";
+            clearStageText.text = $"Stage {stageNumber} Clear";
 
         if (clearMoveText != null)
-            clearMoveText.text = $"남은 이동 {remainingMoveCount}";
+            clearMoveText.text = $"Moves Left {remainingMoveCount}";
 
         if (rewardText != null)
         {
             rewardText.gameObject.SetActive(grantedSkipTicket);
-            rewardText.text = grantedSkipTicket ? $"스킵권 +1 ({skipTicketCount})" : string.Empty;
+            rewardText.text = grantedSkipTicket ? $"Skip Ticket +1 ({skipTicketCount})" : string.Empty;
         }
     }
 
@@ -149,9 +151,9 @@ public class GameUIView : MonoBehaviour
     {
         if (skipButton == null) return;
 
-        bool isFailPanelVisible = failPanel != null && failPanel.gameObject.activeSelf;
-        skipButton.gameObject.SetActive(skipButtonShouldBeVisible && isFailPanelVisible);
-        skipButton.interactable = skipButtonShouldInteract && isFailPanelVisible;
+        bool shouldShowSkipButton = skipButtonShouldBeVisible && isShowingFailResult;
+        skipButton.gameObject.SetActive(shouldShowSkipButton);
+        skipButton.interactable = skipButtonShouldInteract && shouldShowSkipButton;
 
         if (skipButtonText != null)
             skipButtonText.text = skipButtonLabel;
@@ -159,23 +161,91 @@ public class GameUIView : MonoBehaviour
 
     public void ShowClear()
     {
-        HidePanel(failPanel);
+        isShowingFailResult = false;
+        SetClearModeObjects();
         ShowPanel(clearPanel);
         ApplySkipButtonState();
     }
 
     public void ShowFail()
     {
-        HidePanel(clearPanel);
-        ShowPanel(failPanel);
+        isShowingFailResult = true;
+        SetFailModeObjects();
+        ShowPanel(clearPanel);
         ApplySkipButtonState();
     }
 
     public void HideResultPanels()
     {
+        isShowingFailResult = false;
         HidePanel(clearPanel);
-        HidePanel(failPanel);
         ApplySkipButtonState();
+    }
+
+    private void SetClearModeObjects()
+    {
+        if (clearMoveText != null)
+            clearMoveText.gameObject.SetActive(true);
+
+        if (nextButton != null)
+        {
+            nextButton.gameObject.SetActive(true);
+            SetButtonAnchoredY(nextButton, PrimaryButtonY);
+        }
+
+        if (retryButton != null)
+            retryButton.gameObject.SetActive(false);
+
+        if (lobbyButton != null)
+        {
+            lobbyButton.gameObject.SetActive(true);
+            SetButtonAnchoredY(lobbyButton, SecondaryButtonY);
+        }
+    }
+
+    private void SetFailModeObjects()
+    {
+        if (clearStageText != null)
+            clearStageText.text = "Failed";
+
+        if (clearMoveText != null)
+            clearMoveText.gameObject.SetActive(false);
+
+        if (rewardText != null)
+        {
+            rewardText.gameObject.SetActive(false);
+            rewardText.text = string.Empty;
+        }
+
+        if (nextButton != null)
+            nextButton.gameObject.SetActive(false);
+
+        if (retryButton != null)
+        {
+            retryButton.gameObject.SetActive(true);
+            SetButtonAnchoredY(retryButton, PrimaryButtonY);
+        }
+
+        if (skipButton != null)
+            SetButtonAnchoredY(skipButton, SecondaryButtonY);
+
+        if (lobbyButton != null)
+        {
+            lobbyButton.gameObject.SetActive(true);
+            SetButtonAnchoredY(lobbyButton, TertiaryButtonY);
+        }
+    }
+
+    private void SetButtonAnchoredY(Button button, float anchoredY)
+    {
+        if (button == null) return;
+
+        RectTransform rectTransform = button.transform as RectTransform;
+        if (rectTransform == null) return;
+
+        Vector2 anchoredPosition = rectTransform.anchoredPosition;
+        anchoredPosition.y = anchoredY;
+        rectTransform.anchoredPosition = anchoredPosition;
     }
 
     private void NotifyRetryClicked()
@@ -242,7 +312,7 @@ public class GameUIView : MonoBehaviour
             if (retryButtonText != null && !string.IsNullOrWhiteSpace(retryButtonText.text))
                 retryButtonDefaultLabel = retryButtonText.text;
             else
-                retryButtonDefaultLabel = "다시 시도";
+                retryButtonDefaultLabel = "Retry";
         }
 
         if (string.IsNullOrEmpty(nextButtonDefaultLabel))
@@ -250,7 +320,7 @@ public class GameUIView : MonoBehaviour
             if (nextButtonText != null && !string.IsNullOrWhiteSpace(nextButtonText.text))
                 nextButtonDefaultLabel = nextButtonText.text;
             else
-                nextButtonDefaultLabel = "다음";
+                nextButtonDefaultLabel = "Next";
         }
     }
 

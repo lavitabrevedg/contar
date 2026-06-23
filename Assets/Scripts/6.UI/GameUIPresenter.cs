@@ -127,8 +127,8 @@ public class GameUIPresenter : MonoBehaviour
             view.SetStageInfo(0, 0);
             view.SetSkipTicketCount(0, 0);
             view.SetNextStageAvailable(false);
-            view.SetRetryButtonLabel("다시 시도");
-            view.SetSkipButtonState(false, false, "스킵권 없음");
+            view.SetRetryButtonLabel("Retry");
+            view.SetSkipButtonState(false, false, "No Skip Tickets");
             return;
         }
 
@@ -137,8 +137,8 @@ public class GameUIPresenter : MonoBehaviour
         bool hasNextStage = stageCount > 0 && progressService.CurrentStageIndex + 1 < stageCount;
         bool isAdRequired = progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex);
         bool hasAdSkipTicket = progressService.HasAdSkipTicket;
-        string retryLabel = isAdRequired ? "광고 보기" : "다시 시도";
-        string skipLabel = hasAdSkipTicket ? $"스킵권 사용 ({progressService.SkipTicketCount})" : "스킵권 없음";
+        string retryLabel = isAdRequired ? "Watch Ad" : "Retry";
+        string skipLabel = hasAdSkipTicket ? $"Use Skip Ticket ({progressService.SkipTicketCount})" : "No Skip Tickets";
 
         view.SetStageInfo(stageNumber, stageCount);
         view.SetSkipTicketCount(progressService.SkipTicketCount, progressService.MaxSkipTicketCountValue);
