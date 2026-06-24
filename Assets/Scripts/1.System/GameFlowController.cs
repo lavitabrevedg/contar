@@ -8,8 +8,10 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private StageCatalog stageCatalog;
     [SerializeField] private StageProgressService progressService;
     [SerializeField] private DummyAdService dummyAdService;
+    [SerializeField] private GoogleAdMobService googleAdMobService;
     [SerializeField] private bool useInspectorStageOnStart;
 
+    private IAdService adService;
     private bool isBound;
     private bool isShowingAd;
 
@@ -57,11 +59,34 @@ public class GameFlowController : MonoBehaviour
         if (stageCatalog == null)
             stageCatalog = Resources.Load<StageCatalog>("StageCatalog");
 
+        ResolveAdService();
+    }
+
+    private void ResolveAdService()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (googleAdMobService == null)
+            googleAdMobService = GoogleAdMobService.Instance;
+
+        if (googleAdMobService == null)
+            googleAdMobService = FindFirstObjectByType<GoogleAdMobService>();
+
+        if (googleAdMobService == null)
+        {
+            GameObject adServiceObject = new GameObject("GoogleAdMobService");
+            googleAdMobService = adServiceObject.AddComponent<GoogleAdMobService>();
+        }
+
+        adService = googleAdMobService;
+#else
         if (dummyAdService == null)
             dummyAdService = FindFirstObjectByType<DummyAdService>();
 
         if (dummyAdService == null && gameManager != null)
             dummyAdService = gameManager.gameObject.AddComponent<DummyAdService>();
+
+        adService = dummyAdService;
+#endif
     }
 
     private void Bind()
@@ -250,7 +275,7 @@ public class GameFlowController : MonoBehaviour
             return;
         }
 
-        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage, true);
+        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage);
     }
 
     private bool IsFailureRetryAdRequiredForCurrentStage()
@@ -264,12 +289,12 @@ public class GameFlowController : MonoBehaviour
         return progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex);
     }
 
-    private void ShowAdThenRun(AdPlacement placement, Action completed, bool requireReadyAd)
+    private void ShowAdThenRun(AdPlacement placement, Action completed)
     {
         if (isShowingAd)
             return;
 
-        if (progressService == null)
+        if (progressService == null || adService == null)
             ResolveReferences();
 
         int stageIndex = progressService == null ? 0 : progressService.CurrentStageIndex;
@@ -279,14 +304,10 @@ public class GameFlowController : MonoBehaviour
             return;
         }
 
-        IAdService adService = dummyAdService;
         if (adService == null || !adService.IsReady(placement))
         {
             Debug.LogWarning($"[GameFlowController] Ad is not ready. placement={placement}");
-
-            if (!requireReadyAd)
-                completed?.Invoke();
-
+            completed?.Invoke();
             return;
         }
 
@@ -295,8 +316,10 @@ public class GameFlowController : MonoBehaviour
         {
             isShowingAd = false;
 
-            if (adSucceeded || !requireReadyAd)
-                completed?.Invoke();
+            if (!adSucceeded)
+                Debug.LogWarning($"[GameFlowController] Ad failed. Continuing without blocking. placement={placement}");
+
+            completed?.Invoke();
         });
     }
 }
