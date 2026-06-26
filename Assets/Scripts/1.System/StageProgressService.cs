@@ -5,10 +5,10 @@ public class StageProgressService : MonoBehaviour
 {
     private const string HighestClearedStageIndexKey = "contar.progress.highestClearedStageIndex";
     private const string SkipTicketCountKey = "contar.progress.skipTicketCount";
+    private const string FailureCountKey = "contar.progress.failureCount";
     private const string UpdatedAtUtcTicksKey = "contar.progress.updatedAtUtcTicks";
     private const string LegacyCurrentStageIndexKey = "contar.progress.currentStageIndex";
     private const string LegacyFailureStageIndexKey = "contar.progress.failureStageIndex";
-    private const string LegacyFailureCountKey = "contar.progress.failureCount";
 
     private const int InitialStageIndex = 0;
     private const int InitialHighestClearedStageIndex = -1;
@@ -33,7 +33,6 @@ public class StageProgressService : MonoBehaviour
     public event Action ProgressChanged;
     public event Action PersistentProgressChanged;
 
-    private int failureStageIndex;
     private bool hasExplicitStageSelection;
 
     private void Awake()
@@ -45,12 +44,12 @@ public class StageProgressService : MonoBehaviour
     {
         HighestClearedStageIndex = PlayerPrefs.GetInt(HighestClearedStageIndexKey, InitialHighestClearedStageIndex);
         SkipTicketCount = Mathf.Clamp(PlayerPrefs.GetInt(SkipTicketCountKey, InitialSkipTicketCount), 0, MaxSkipTicketCount);
+        FailureCount = Mathf.Max(0, PlayerPrefs.GetInt(FailureCountKey, 0));
         string updatedAtUtcTicksText = PlayerPrefs.GetString(UpdatedAtUtcTicksKey, "0");
         if (!long.TryParse(updatedAtUtcTicksText, out long updatedAtUtcTicks))
             updatedAtUtcTicks = 0;
 
         UpdatedAtUtcTicks = updatedAtUtcTicks;
-        FailureCount = 0;
 
         if (pendingStageIndex >= 0)
         {
@@ -63,8 +62,6 @@ public class StageProgressService : MonoBehaviour
             CurrentStageIndex = GetContinueStageIndex();
             hasExplicitStageSelection = false;
         }
-
-        ResetFailureCountInternal();
 
         NotifyProgressChanged();
     }
@@ -81,6 +78,7 @@ public class StageProgressService : MonoBehaviour
 
         PlayerPrefs.SetInt(HighestClearedStageIndexKey, HighestClearedStageIndex);
         PlayerPrefs.SetInt(SkipTicketCountKey, SkipTicketCount);
+        PlayerPrefs.SetInt(FailureCountKey, FailureCount);
         PlayerPrefs.SetString(UpdatedAtUtcTicksKey, UpdatedAtUtcTicks.ToString());
         PlayerPrefs.Save();
     }
@@ -90,6 +88,7 @@ public class StageProgressService : MonoBehaviour
         return new StageProgressSnapshot(
             HighestClearedStageIndex,
             SkipTicketCount,
+            FailureCount,
             UpdatedAtUtcTicks);
     }
 
@@ -108,8 +107,8 @@ public class StageProgressService : MonoBehaviour
 
         HighestClearedStageIndex = Mathf.Max(InitialHighestClearedStageIndex, snapshot.highestClearedStageIndex);
         SkipTicketCount = Mathf.Clamp(snapshot.skipTicketCount, 0, MaxSkipTicketCount);
+        FailureCount = Mathf.Max(0, snapshot.failureCount);
         UpdatedAtUtcTicks = Math.Max(0, snapshot.updatedAtUtcTicks);
-        FailureCount = 0;
 
         if (!hasExplicitStageSelection)
             CurrentStageIndex = GetContinueStageIndex();
@@ -127,13 +126,9 @@ public class StageProgressService : MonoBehaviour
     public void SetCurrentStage(int stageIndex)
     {
         int clampedStageIndex = Mathf.Max(InitialStageIndex, stageIndex);
-        bool stageChanged = CurrentStageIndex != clampedStageIndex;
 
         CurrentStageIndex = clampedStageIndex;
         hasExplicitStageSelection = true;
-
-        if (stageChanged)
-            ResetFailureCountInternal();
 
         NotifyProgressChanged();
     }
@@ -153,7 +148,6 @@ public class StageProgressService : MonoBehaviour
                 grantedSkipTicket = TryAddSkipTicket(1);
         }
 
-        ResetFailureCountInternal();
         Save();
         NotifyProgressChanged();
         NotifyPersistentProgressChanged();
@@ -164,15 +158,13 @@ public class StageProgressService : MonoBehaviour
     public int RecordFailure(int stageIndex)
     {
         int clampedStageIndex = Mathf.Max(InitialStageIndex, stageIndex);
-
-        if (failureStageIndex != clampedStageIndex)
-        {
-            failureStageIndex = clampedStageIndex;
-            FailureCount = 0;
-        }
+        if (ShouldSuppressAds(clampedStageIndex))
+            return FailureCount;
 
         FailureCount++;
+        Save();
         NotifyProgressChanged();
+        NotifyPersistentProgressChanged();
 
         return FailureCount;
     }
@@ -211,8 +203,13 @@ public class StageProgressService : MonoBehaviour
 
     public void ResetFailureCount()
     {
-        ResetFailureCountInternal();
+        if (FailureCount <= 0)
+            return;
+
+        FailureCount = 0;
+        Save();
         NotifyProgressChanged();
+        NotifyPersistentProgressChanged();
     }
 
     public void ResetProgress()
@@ -221,7 +218,7 @@ public class StageProgressService : MonoBehaviour
         PlayerPrefs.DeleteKey(HighestClearedStageIndexKey);
         PlayerPrefs.DeleteKey(SkipTicketCountKey);
         PlayerPrefs.DeleteKey(LegacyFailureStageIndexKey);
-        PlayerPrefs.DeleteKey(LegacyFailureCountKey);
+        PlayerPrefs.DeleteKey(FailureCountKey);
         PlayerPrefs.DeleteKey(UpdatedAtUtcTicksKey);
         PlayerPrefs.Save();
 
@@ -232,16 +229,9 @@ public class StageProgressService : MonoBehaviour
         UpdatedAtUtcTicks = DateTime.UtcNow.Ticks;
         hasExplicitStageSelection = false;
         pendingStageIndex = -1;
-        ResetFailureCountInternal();
         Save(false);
         NotifyProgressChanged();
         NotifyPersistentProgressChanged();
-    }
-
-    private void ResetFailureCountInternal()
-    {
-        failureStageIndex = CurrentStageIndex;
-        FailureCount = 0;
     }
 
     private bool TryAddSkipTicket(int count)
@@ -272,6 +262,7 @@ public class StageProgressSnapshot
 {
     public int highestClearedStageIndex;
     public int skipTicketCount;
+    public int failureCount;
     public long updatedAtUtcTicks;
 
     public StageProgressSnapshot()
@@ -281,10 +272,12 @@ public class StageProgressSnapshot
     public StageProgressSnapshot(
         int highestClearedStageIndex,
         int skipTicketCount,
+        int failureCount,
         long updatedAtUtcTicks)
     {
         this.highestClearedStageIndex = highestClearedStageIndex;
         this.skipTicketCount = skipTicketCount;
+        this.failureCount = failureCount;
         this.updatedAtUtcTicks = updatedAtUtcTicks;
     }
 }

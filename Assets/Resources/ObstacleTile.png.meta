@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 5c8855bb88167484cba04d4153fc5303
+guid: 08e384112f611d94db17cb7e7d01e42c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5760202260919997367
-    second: BackGround_0
+      213: -3848870881679880540
+    second: ObstacleTile_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BackGround_0
+      name: ObstacleTile_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 941
-        height: 1672
+        x: 8
+        y: 7
+        width: 112
+        height: 112
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 7b3d98cff6950ff40800000000000000
-      internalID: 5760202260919997367
+      spriteID: 4ae40274350169ac0800000000000000
+      internalID: -3848870881679880540
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BackGround_0: 5760202260919997367
+      ObstacleTile_0: -3848870881679880540
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

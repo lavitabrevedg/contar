@@ -7,7 +7,6 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private GameManager gameManager;
     [SerializeField] private StageCatalog stageCatalog;
     [SerializeField] private StageProgressService progressService;
-    [SerializeField] private DummyAdService dummyAdService;
     [SerializeField] private GoogleAdMobService googleAdMobService;
     [SerializeField] private bool useInspectorStageOnStart;
 
@@ -79,13 +78,7 @@ public class GameFlowController : MonoBehaviour
 
         adService = googleAdMobService;
 #else
-        if (dummyAdService == null)
-            dummyAdService = FindFirstObjectByType<DummyAdService>();
-
-        if (dummyAdService == null && gameManager != null)
-            dummyAdService = gameManager.gameObject.AddComponent<DummyAdService>();
-
-        adService = dummyAdService;
+        adService = null;
 #endif
     }
 
@@ -316,8 +309,15 @@ public class GameFlowController : MonoBehaviour
         {
             isShowingAd = false;
 
-            if (!adSucceeded)
+            if (adSucceeded)
+            {
+                if (progressService != null)
+                    progressService.ResetFailureCount();
+            }
+            else
+            {
                 Debug.LogWarning($"[GameFlowController] Ad failed. Continuing without blocking. placement={placement}");
+            }
 
             completed?.Invoke();
         });

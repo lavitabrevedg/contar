@@ -8,7 +8,6 @@ public class GameUIView : MonoBehaviour
 {
     private const float PrimaryButtonY = -159.3f;
     private const float SecondaryButtonY = -353.3f;
-    private const float TertiaryButtonY = -547.3f;
 
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private TMP_Text stageText;
@@ -230,10 +229,7 @@ public class GameUIView : MonoBehaviour
             SetButtonAnchoredY(skipButton, SecondaryButtonY);
 
         if (lobbyButton != null)
-        {
-            lobbyButton.gameObject.SetActive(true);
-            SetButtonAnchoredY(lobbyButton, TertiaryButtonY);
-        }
+            lobbyButton.gameObject.SetActive(false);
     }
 
     private void SetButtonAnchoredY(Button button, float anchoredY)

@@ -33,11 +33,14 @@ public static class ProgressFeatureSmokeTest
             AssertTrue(progressService.ShouldSuppressAds(0), "stage 0 should suppress ads");
             AssertTrue(progressService.ShouldSuppressAds(5), "stage 5 should suppress ads");
             AssertTrue(!progressService.ShouldSuppressAds(6), "stage 6 should allow ads");
+            AssertEqual(0, progressService.RecordFailure(0), "ad-free stage failure should not count");
+            AssertEqual(0, progressService.RecordFailure(5), "last ad-free stage failure should not count");
 
             StageClearProgressResult firstReward = progressService.MarkStageCleared(2);
             AssertTrue(firstReward.WasNewClear, "stage 2 should be a new clear");
             AssertTrue(firstReward.GrantedSkipTicket, "stage 2 should grant an ad skip ticket");
             AssertEqual(4, firstReward.SkipTicketCount, "ad skip ticket after third clear");
+            AssertEqual(0, progressService.FailureCount, "stage clear should not change failure count");
 
             StageClearProgressResult duplicateReward = progressService.MarkStageCleared(2);
             AssertTrue(!duplicateReward.WasNewClear, "duplicate clear should not be new");
@@ -45,14 +48,16 @@ public static class ProgressFeatureSmokeTest
             AssertEqual(4, duplicateReward.SkipTicketCount, "ad skip ticket after duplicate clear");
 
             int firstFailureCount = progressService.RecordFailure(7);
-            int secondFailureCount = progressService.RecordFailure(7);
+            int secondFailureCount = progressService.RecordFailure(8);
             AssertEqual(1, firstFailureCount, "first failure count");
             AssertEqual(2, secondFailureCount, "second failure count");
 
             progressService.SetCurrentStage(6);
+            AssertEqual(2, progressService.FailureCount, "stage change should keep global failure count");
             int stageBeforeAdSkipTicket = progressService.CurrentStageIndex;
             AssertTrue(progressService.TryUseAdSkipTicket(), "first ad skip ticket should be usable");
             AssertEqual(stageBeforeAdSkipTicket, progressService.CurrentStageIndex, "ad skip ticket should not advance the stage");
+            AssertEqual(2, progressService.FailureCount, "ad skip ticket should not reset failure count");
             AssertTrue(progressService.TryUseAdSkipTicket(), "second ad skip ticket should be usable");
             AssertTrue(progressService.TryUseAdSkipTicket(), "third ad skip ticket should be usable");
             AssertTrue(progressService.TryUseAdSkipTicket(), "fourth ad skip ticket should be usable");
@@ -60,20 +65,19 @@ public static class ProgressFeatureSmokeTest
             AssertEqual(0, progressService.SkipTicketCount, "ad skip ticket after uses");
 
             AssertTrue(!progressService.ShouldSuppressAds(progressService.CurrentStageIndex), "stage 6 should allow ads");
+            AssertTrue(!progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex), "two global failures should not require ad");
+            int thirdFailureCount = progressService.RecordFailure(6);
+            AssertEqual(3, thirdFailureCount, "third global failure should count");
+            AssertTrue(progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex), "third global failure should require ad");
             bool usedAdSkipTicketAtZero = progressService.TryUseAdSkipTicket();
             AssertTrue(!usedAdSkipTicketAtZero, "ad skip ticket should still be unavailable at zero");
             AssertEqual(stageBeforeAdSkipTicket, progressService.CurrentStageIndex, "failed ad skip ticket use should not advance the stage");
+            AssertEqual(3, progressService.FailureCount, "failed ad skip ticket use should not reset failure count");
 
-            DummyAdService adService = gameObject.AddComponent<DummyAdService>();
-            bool adCompleted = false;
-            bool adSucceeded = false;
-            adService.Show(AdPlacement.RestartStage, success =>
-            {
-                adCompleted = true;
-                adSucceeded = success;
-            });
-            AssertTrue(adCompleted, "dummy restart ad should complete");
-            AssertTrue(adSucceeded, "dummy restart ad should succeed");
+            StageProgressSnapshot snapshot = progressService.CreateSnapshot();
+            AssertEqual(3, snapshot.failureCount, "snapshot should include failure count");
+            progressService.ResetFailureCount();
+            AssertEqual(0, progressService.FailureCount, "ad success reset should clear failure count");
 
             ProgressFeatureSetup.SyncStageCatalog();
             StageCatalog catalog = AssetDatabase.LoadAssetAtPath<StageCatalog>(CatalogPath);
