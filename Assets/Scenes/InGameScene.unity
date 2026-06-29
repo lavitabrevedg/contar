@@ -1100,6 +1100,9 @@ MonoBehaviour:
   openButton: {fileID: 619653161}
   closeButton: {fileID: 2119242837}
   soundButton: {fileID: 1740951887}
+  soundButtonImage: {fileID: 0}
+  soundOnSprite: {fileID: 0}
+  soundOffSprite: {fileID: 0}
   soundButtonText: {fileID: 598688576}
   hidePanelOnAwake: 1
   panelTweenDuration: 0.18
@@ -2207,8 +2210,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -346.6, y: -261}
-  m_SizeDelta: {x: 420, y: 95}
+  m_AnchoredPosition: {x: -345, y: -251}
+  m_SizeDelta: {x: 364.6512, y: 95}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &1000000003
 CanvasRenderer:

@@ -10,6 +10,9 @@ public class SettingsView : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private Button soundButton;
+    [SerializeField] private Image soundButtonImage;
+    [SerializeField] private Sprite soundOnSprite;
+    [SerializeField] private Sprite soundOffSprite;
     [SerializeField] private TMP_Text soundButtonText;
     [SerializeField] private bool hidePanelOnAwake = true;
     [SerializeField] private float panelTweenDuration = 0.18f;
@@ -20,6 +23,8 @@ public class SettingsView : MonoBehaviour
 
     private void Awake()
     {
+        ResolveSoundButtonImage();
+
         if (hidePanelOnAwake)
             SetPanelVisible(false);
     }
@@ -82,8 +87,25 @@ public class SettingsView : MonoBehaviour
 
     public void SetSoundEnabled(bool isEnabled)
     {
+        ResolveSoundButtonImage();
+
+        if (soundButtonImage != null)
+        {
+            Sprite soundSprite = isEnabled ? soundOnSprite : soundOffSprite;
+            if (soundSprite != null)
+                soundButtonImage.sprite = soundSprite;
+        }
+
         if (soundButtonText != null)
             soundButtonText.text = isEnabled ? "Sound On" : "Sound Off";
+    }
+
+    private void ResolveSoundButtonImage()
+    {
+        if (soundButtonImage != null || soundButton == null)
+            return;
+
+        soundButtonImage = soundButton.targetGraphic as Image;
     }
 
     private void NotifyOpenClicked()

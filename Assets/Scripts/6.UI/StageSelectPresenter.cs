@@ -4,11 +4,14 @@ using UnityEngine.SceneManagement;
 public class StageSelectPresenter : MonoBehaviour
 {
     private const string InGameSceneName = "InGameScene";
+    private const int stagesPerPage = 12;
 
     [SerializeField] private StageSelectView view;
     [SerializeField] private StageCatalog stageCatalog;
     [SerializeField] private StageProgressService progressService;
     [SerializeField] private AudioService audioService;
+
+    private int pageStartStageIndex;
 
     private void Awake()
     {
@@ -47,14 +50,16 @@ public class StageSelectPresenter : MonoBehaviour
         if (view == null)
             return;
 
-        view.ContinueClicked -= OnContinueClicked;
         view.OpenStageSelectClicked -= OnOpenStageSelectClicked;
         view.CloseStageSelectClicked -= OnCloseStageSelectClicked;
+        view.PreviousPageClicked -= OnPreviousPageClicked;
+        view.NextPageClicked -= OnNextPageClicked;
         view.StageClicked -= OnStageClicked;
 
-        view.ContinueClicked += OnContinueClicked;
         view.OpenStageSelectClicked += OnOpenStageSelectClicked;
         view.CloseStageSelectClicked += OnCloseStageSelectClicked;
+        view.PreviousPageClicked += OnPreviousPageClicked;
+        view.NextPageClicked += OnNextPageClicked;
         view.StageClicked += OnStageClicked;
     }
 
@@ -63,21 +68,11 @@ public class StageSelectPresenter : MonoBehaviour
         if (view == null)
             return;
 
-        view.ContinueClicked -= OnContinueClicked;
         view.OpenStageSelectClicked -= OnOpenStageSelectClicked;
         view.CloseStageSelectClicked -= OnCloseStageSelectClicked;
+        view.PreviousPageClicked -= OnPreviousPageClicked;
+        view.NextPageClicked -= OnNextPageClicked;
         view.StageClicked -= OnStageClicked;
-    }
-
-    private void OnContinueClicked()
-    {
-        ResolveReferences();
-
-        if (progressService != null)
-            progressService.SelectStageForPlay(progressService.CurrentStageIndex);
-
-        PlayUiSound();
-        SceneManager.LoadScene(InGameSceneName);
     }
 
     private void OnOpenStageSelectClicked()
@@ -96,6 +91,30 @@ public class StageSelectPresenter : MonoBehaviour
 
         if (view != null)
             view.SetPanelVisible(false);
+    }
+
+    private void OnPreviousPageClicked()
+    {
+        if (pageStartStageIndex <= 0)
+            return;
+
+        pageStartStageIndex = Mathf.Max(0, pageStartStageIndex - stagesPerPage);
+        PlayUiSound();
+        Refresh();
+    }
+
+    private void OnNextPageClicked()
+    {
+        ResolveReferences();
+
+        int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
+        int nextPageStartStageIndex = pageStartStageIndex + stagesPerPage;
+        if (nextPageStartStageIndex >= stageCount)
+            return;
+
+        pageStartStageIndex = nextPageStartStageIndex;
+        PlayUiSound();
+        Refresh();
     }
 
     private void OnStageClicked(int stageIndex)
@@ -120,15 +139,32 @@ public class StageSelectPresenter : MonoBehaviour
 
         int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
         int currentStageIndex = progressService == null ? 0 : Mathf.Clamp(progressService.CurrentStageIndex, 0, Mathf.Max(0, stageCount - 1));
+        pageStartStageIndex = ClampPageStartStageIndex(pageStartStageIndex, stageCount);
+
+        view.SetPageStartStageIndex(pageStartStageIndex);
         view.SetCurrentStageText(currentStageIndex, stageCount);
 
         int buttonCount = view.StageButtonCount;
         for (int i = 0; i < buttonCount; i++)
         {
-            bool isInCatalog = i < stageCount;
-            bool isAvailable = isInCatalog && IsStageAvailable(i);
-            view.SetStageButton(i, i, isAvailable);
+            int stageIndex = pageStartStageIndex + i;
+            bool isInCatalog = stageIndex < stageCount;
+            bool isAvailable = isInCatalog && IsStageAvailable(stageIndex);
+            view.SetStageButton(i, stageIndex, isInCatalog, isAvailable);
         }
+
+        bool canMovePrevious = pageStartStageIndex > 0;
+        bool canMoveNext = pageStartStageIndex + stagesPerPage < stageCount;
+        view.SetPageButtons(canMovePrevious, canMoveNext);
+    }
+
+    private int ClampPageStartStageIndex(int stageIndex, int stageCount)
+    {
+        if (stageCount <= 0)
+            return 0;
+
+        int lastPageStartStageIndex = ((stageCount - 1) / stagesPerPage) * stagesPerPage;
+        return Mathf.Clamp(stageIndex, 0, lastPageStartStageIndex);
     }
 
     private bool IsStageAvailable(int stageIndex)

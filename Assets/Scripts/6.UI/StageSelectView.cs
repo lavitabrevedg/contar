@@ -7,26 +7,31 @@ using UnityEngine.UI;
 
 public class StageSelectView : MonoBehaviour
 {
+    private const float pageButtonOffset = 64f;
+    private const float pageButtonSize = 52f;
+
     [SerializeField] private CanvasGroup panel;
-    [SerializeField] private Button continueButton;
     [SerializeField] private Button openStageSelectButton;
     [SerializeField] private Button closeStageSelectButton;
+    [SerializeField] private Button previousPageButton;
+    [SerializeField] private Button nextPageButton;
     [SerializeField] private TMP_Text currentStageText;
     [SerializeField] private Button[] stageButtons;
     [SerializeField] private TMP_Text[] stageButtonTexts;
     [SerializeField] private float panelTweenDuration = 0.18f;
 
     private UnityAction[] stageButtonHandlers;
+    private int pageStartStageIndex;
 
-    public event Action ContinueClicked;
     public event Action OpenStageSelectClicked;
     public event Action CloseStageSelectClicked;
+    public event Action PreviousPageClicked;
+    public event Action NextPageClicked;
     public event Action<int> StageClicked;
 
     private void OnEnable()
     {
-        if (continueButton != null)
-            continueButton.onClick.AddListener(NotifyContinueClicked);
+        EnsurePageButtons();
 
         if (openStageSelectButton != null)
             openStageSelectButton.onClick.AddListener(NotifyOpenStageSelectClicked);
@@ -34,19 +39,28 @@ public class StageSelectView : MonoBehaviour
         if (closeStageSelectButton != null)
             closeStageSelectButton.onClick.AddListener(NotifyCloseStageSelectClicked);
 
+        if (previousPageButton != null)
+            previousPageButton.onClick.AddListener(NotifyPreviousPageClicked);
+
+        if (nextPageButton != null)
+            nextPageButton.onClick.AddListener(NotifyNextPageClicked);
+
         BindStageButtons();
     }
 
     private void OnDisable()
     {
-        if (continueButton != null)
-            continueButton.onClick.RemoveListener(NotifyContinueClicked);
-
         if (openStageSelectButton != null)
             openStageSelectButton.onClick.RemoveListener(NotifyOpenStageSelectClicked);
 
         if (closeStageSelectButton != null)
             closeStageSelectButton.onClick.RemoveListener(NotifyCloseStageSelectClicked);
+
+        if (previousPageButton != null)
+            previousPageButton.onClick.RemoveListener(NotifyPreviousPageClicked);
+
+        if (nextPageButton != null)
+            nextPageButton.onClick.RemoveListener(NotifyNextPageClicked);
 
         UnbindStageButtons();
     }
@@ -97,21 +111,40 @@ public class StageSelectView : MonoBehaviour
         currentStageText.text = $"스테이지 {currentStageIndex + 1}/{stageCount}";
     }
 
-    public void SetStageButton(int buttonIndex, int stageIndex, bool isAvailable)
+    public void SetPageStartStageIndex(int stageIndex)
+    {
+        pageStartStageIndex = Mathf.Max(0, stageIndex);
+    }
+
+    public void SetPageButtons(bool canMovePrevious, bool canMoveNext)
+    {
+        EnsurePageButtons();
+
+        if (previousPageButton != null)
+            previousPageButton.interactable = canMovePrevious;
+
+        if (nextPageButton != null)
+            nextPageButton.interactable = canMoveNext;
+    }
+
+    public void SetStageButton(int buttonIndex, int stageIndex, bool isVisible, bool isAvailable)
     {
         if (stageButtons == null || buttonIndex < 0 || buttonIndex >= stageButtons.Length)
             return;
 
         Button button = stageButtons[buttonIndex];
         if (button != null)
-            button.interactable = isAvailable;
+        {
+            button.gameObject.SetActive(isVisible);
+            button.interactable = isVisible && isAvailable;
+        }
 
         TMP_Text label = null;
         if (stageButtonTexts != null && buttonIndex < stageButtonTexts.Length)
             label = stageButtonTexts[buttonIndex];
 
         if (label != null)
-            label.text = isAvailable ? $"Stage {stageIndex + 1}" : $"Stage {stageIndex + 1}";
+            label.text = $"Stage {stageIndex + 1}";
     }
 
     public int StageButtonCount => stageButtons == null ? 0 : stageButtons.Length;
@@ -124,12 +157,12 @@ public class StageSelectView : MonoBehaviour
         stageButtonHandlers = new UnityAction[stageButtons.Length];
         for (int i = 0; i < stageButtons.Length; i++)
         {
-            int stageIndex = i;
+            int buttonIndex = i;
             Button button = stageButtons[i];
             if (button == null)
                 continue;
 
-            UnityAction handler = () => NotifyStageClicked(stageIndex);
+            UnityAction handler = () => NotifyStageClicked(pageStartStageIndex + buttonIndex);
             stageButtonHandlers[i] = handler;
             button.onClick.AddListener(handler);
         }
@@ -151,11 +184,6 @@ public class StageSelectView : MonoBehaviour
         stageButtonHandlers = null;
     }
 
-    private void NotifyContinueClicked()
-    {
-        ContinueClicked?.Invoke();
-    }
-
     private void NotifyOpenStageSelectClicked()
     {
         OpenStageSelectClicked?.Invoke();
@@ -166,8 +194,80 @@ public class StageSelectView : MonoBehaviour
         CloseStageSelectClicked?.Invoke();
     }
 
+    private void NotifyPreviousPageClicked()
+    {
+        PreviousPageClicked?.Invoke();
+    }
+
+    private void NotifyNextPageClicked()
+    {
+        NextPageClicked?.Invoke();
+    }
+
     private void NotifyStageClicked(int stageIndex)
     {
         StageClicked?.Invoke(stageIndex);
+    }
+
+    private void EnsurePageButtons()
+    {
+        if (panel == null)
+            return;
+
+        if (previousPageButton == null)
+            previousPageButton = CreatePageButton("PreviousPageButton", "<", -1f);
+
+        if (nextPageButton == null)
+            nextPageButton = CreatePageButton("NextPageButton", ">", 1f);
+    }
+
+    private Button CreatePageButton(string objectName, string labelText, float direction)
+    {
+        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(panel.transform, false);
+
+        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+        buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
+        buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
+        buttonRect.pivot = new Vector2(0.5f, 0.5f);
+        buttonRect.sizeDelta = new Vector2(pageButtonSize, pageButtonSize);
+
+        RectTransform panelRect = panel.transform as RectTransform;
+        float panelHalfWidth = panelRect == null ? 220f : panelRect.rect.width * 0.5f;
+        if (panelHalfWidth <= 0f)
+            panelHalfWidth = 220f;
+
+        buttonRect.anchoredPosition = new Vector2(direction * (panelHalfWidth + pageButtonOffset), 0f);
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.22f, 0.18f, 0.42f, 0.95f);
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+
+        ColorBlock colors = button.colors;
+        colors.disabledColor = new Color(0.22f, 0.18f, 0.42f, 0.35f);
+        colors.highlightedColor = new Color(0.32f, 0.27f, 0.58f, 1f);
+        colors.pressedColor = new Color(0.16f, 0.13f, 0.32f, 1f);
+        button.colors = colors;
+
+        GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelObject.transform.SetParent(buttonObject.transform, false);
+
+        RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
+        label.text = labelText;
+        label.alignment = TextAlignmentOptions.Center;
+        label.fontSize = 34f;
+        label.fontStyle = FontStyles.Bold;
+        label.color = Color.white;
+        label.raycastTarget = false;
+
+        return button;
     }
 }
