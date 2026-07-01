@@ -125,6 +125,7 @@ public class GameUIPresenter : MonoBehaviour
         if (progressService == null)
         {
             view.SetStageInfo(0, 0);
+            view.SetExitCondition(GetCurrentExitCondition());
             view.SetSkipTicketCount(0, 0);
             view.SetNextStageAvailable(false);
             view.SetRetryButtonLabel("Retry");
@@ -141,10 +142,36 @@ public class GameUIPresenter : MonoBehaviour
         string skipLabel = hasAdSkipTicket ? $"Use Skip Ticket ({progressService.SkipTicketCount})" : "No Skip Tickets";
 
         view.SetStageInfo(stageNumber, stageCount);
+        view.SetExitCondition(GetCurrentExitCondition());
         view.SetSkipTicketCount(progressService.SkipTicketCount, progressService.MaxSkipTicketCountValue);
         view.SetNextStageAvailable(hasNextStage);
         view.SetRetryButtonLabel(retryLabel);
         view.SetSkipButtonState(isAdRequired, hasAdSkipTicket, skipLabel);
+    }
+
+    private ExitCondition GetCurrentExitCondition()
+    {
+        GameManager gameManager = GameManager.Instance;
+        MapGenerator mapGenerator = gameManager == null ? null : gameManager.MapGenerator;
+        MapData mapData = mapGenerator == null ? null : mapGenerator.mapData;
+        if (mapData == null || mapData.rows == null)
+            return ExitCondition.Free;
+
+        for (int y = 0; y < mapData.rows.Length; y++)
+        {
+            Wrapper<SerializedTile> row = mapData.rows[y];
+            if (row == null || row.values == null)
+                continue;
+
+            for (int x = 0; x < row.values.Length; x++)
+            {
+                SerializedTile tile = row.values[x];
+                if (tile.type == TileType.Exit)
+                    return tile.exitCondition;
+            }
+        }
+
+        return ExitCondition.Free;
     }
 
     private void OnMoveCountChanged(int moveCount)

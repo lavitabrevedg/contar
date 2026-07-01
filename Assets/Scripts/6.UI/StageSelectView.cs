@@ -16,6 +16,8 @@ public class StageSelectView : MonoBehaviour
     [SerializeField] private Button previousPageButton;
     [SerializeField] private Button nextPageButton;
     [SerializeField] private TMP_Text currentStageText;
+    [SerializeField] private Button playCurrentStageButton;
+    [SerializeField] private TMP_Text currentStageButtonText;
     [SerializeField] private Button[] stageButtons;
     [SerializeField] private TMP_Text[] stageButtonTexts;
     [SerializeField] private float panelTweenDuration = 0.18f;
@@ -27,6 +29,7 @@ public class StageSelectView : MonoBehaviour
     public event Action CloseStageSelectClicked;
     public event Action PreviousPageClicked;
     public event Action NextPageClicked;
+    public event Action PlayCurrentStageClicked;
     public event Action<int> StageClicked;
 
     private void OnEnable()
@@ -45,6 +48,9 @@ public class StageSelectView : MonoBehaviour
         if (nextPageButton != null)
             nextPageButton.onClick.AddListener(NotifyNextPageClicked);
 
+        if (playCurrentStageButton != null)
+            playCurrentStageButton.onClick.AddListener(NotifyPlayCurrentStageClicked);
+
         BindStageButtons();
     }
 
@@ -61,6 +67,9 @@ public class StageSelectView : MonoBehaviour
 
         if (nextPageButton != null)
             nextPageButton.onClick.RemoveListener(NotifyNextPageClicked);
+
+        if (playCurrentStageButton != null)
+            playCurrentStageButton.onClick.RemoveListener(NotifyPlayCurrentStageClicked);
 
         UnbindStageButtons();
     }
@@ -109,6 +118,23 @@ public class StageSelectView : MonoBehaviour
         }
 
         currentStageText.text = $"스테이지 {currentStageIndex + 1}/{stageCount}";
+    }
+
+    public void SetCurrentStageButton(int currentStageIndex, int stageCount, bool isAvailable)
+    {
+        if (playCurrentStageButton != null)
+            playCurrentStageButton.interactable = isAvailable;
+
+        if (currentStageButtonText == null)
+            return;
+
+        if (stageCount <= 0 || !isAvailable)
+        {
+            currentStageButtonText.text = "Stage -";
+            return;
+        }
+
+        currentStageButtonText.text = $"Stage {currentStageIndex + 1}";
     }
 
     public void SetPageStartStageIndex(int stageIndex)
@@ -202,6 +228,11 @@ public class StageSelectView : MonoBehaviour
     private void NotifyNextPageClicked()
     {
         NextPageClicked?.Invoke();
+    }
+
+    private void NotifyPlayCurrentStageClicked()
+    {
+        PlayCurrentStageClicked?.Invoke();
     }
 
     private void NotifyStageClicked(int stageIndex)

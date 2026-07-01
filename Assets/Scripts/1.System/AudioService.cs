@@ -2,16 +2,24 @@ using UnityEngine;
 
 public class AudioService : MonoBehaviour
 {
+    private const string MoveClipPath = "Sounds/SFX_Move";
+    private const string PushClipPath = "Sounds/SFX_Push";
+    private const string BlockedClipPath = "Sounds/SFX_Blocked";
+    private const string ClearClipPath = "Sounds/SFX_Clear";
+    private const string FailClipPath = "Sounds/SFX_Fail";
+    private const string MoveTileClipPath = "Sounds/SFX_MoveTile";
+    private const string UiClipPath = "Sounds/SFX_UI";
+
     [SerializeField] private SettingsService settingsService;
+    [SerializeField] private AudioClip moveClip;
+    [SerializeField] private AudioClip pushClip;
+    [SerializeField] private AudioClip blockedClip;
+    [SerializeField] private AudioClip clearClip;
+    [SerializeField] private AudioClip failClip;
+    [SerializeField] private AudioClip moveTileClip;
+    [SerializeField] private AudioClip uiClip;
 
     private AudioSource audioSource;
-    private AudioClip moveClip;
-    private AudioClip pushClip;
-    private AudioClip blockedClip;
-    private AudioClip clearClip;
-    private AudioClip failClip;
-    private AudioClip rewardClip;
-    private AudioClip uiClip;
 
     private void Awake()
     {
@@ -22,7 +30,7 @@ public class AudioService : MonoBehaviour
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
         ResolveSettingsService();
-        BuildClips();
+        LoadMissingClips();
     }
 
     public void PlayMove()
@@ -50,9 +58,9 @@ public class AudioService : MonoBehaviour
         Play(failClip);
     }
 
-    public void PlayReward()
+    public void PlayMoveTile()
     {
-        Play(rewardClip);
+        Play(moveTileClip);
     }
 
     public void PlayUi()
@@ -79,32 +87,22 @@ public class AudioService : MonoBehaviour
             settingsService = FindFirstObjectByType<SettingsService>();
     }
 
-    private void BuildClips()
+    private void LoadMissingClips()
     {
-        moveClip = CreateTone("contar_move", 440f, 0.045f, 0.12f);
-        pushClip = CreateTone("contar_push", 220f, 0.08f, 0.18f);
-        blockedClip = CreateTone("contar_blocked", 120f, 0.08f, 0.14f);
-        clearClip = CreateTone("contar_clear", 660f, 0.14f, 0.2f);
-        failClip = CreateTone("contar_fail", 90f, 0.16f, 0.18f);
-        rewardClip = CreateTone("contar_reward", 880f, 0.12f, 0.18f);
-        uiClip = CreateTone("contar_ui", 520f, 0.04f, 0.1f);
+        moveClip = LoadClipIfMissing(moveClip, MoveClipPath);
+        pushClip = LoadClipIfMissing(pushClip, PushClipPath);
+        blockedClip = LoadClipIfMissing(blockedClip, BlockedClipPath);
+        clearClip = LoadClipIfMissing(clearClip, ClearClipPath);
+        failClip = LoadClipIfMissing(failClip, FailClipPath);
+        moveTileClip = LoadClipIfMissing(moveTileClip, MoveTileClipPath);
+        uiClip = LoadClipIfMissing(uiClip, UiClipPath);
     }
 
-    private AudioClip CreateTone(string clipName, float frequency, float duration, float volume)
+    private AudioClip LoadClipIfMissing(AudioClip clip, string resourcePath)
     {
-        int sampleRate = 44100;
-        int sampleCount = Mathf.Max(1, Mathf.RoundToInt(sampleRate * duration));
-        float[] samples = new float[sampleCount];
+        if (clip != null)
+            return clip;
 
-        for (int i = 0; i < sampleCount; i++)
-        {
-            float progress = (float)i / sampleCount;
-            float fade = 1f - progress;
-            samples[i] = Mathf.Sin(2f * Mathf.PI * frequency * i / sampleRate) * volume * fade;
-        }
-
-        AudioClip clip = AudioClip.Create(clipName, sampleCount, 1, sampleRate, false);
-        clip.SetData(samples, 0);
-        return clip;
+        return Resources.Load<AudioClip>(resourcePath);
     }
 }

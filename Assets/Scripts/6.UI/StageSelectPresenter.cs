@@ -54,13 +54,21 @@ public class StageSelectPresenter : MonoBehaviour
         view.CloseStageSelectClicked -= OnCloseStageSelectClicked;
         view.PreviousPageClicked -= OnPreviousPageClicked;
         view.NextPageClicked -= OnNextPageClicked;
+        view.PlayCurrentStageClicked -= OnPlayCurrentStageClicked;
         view.StageClicked -= OnStageClicked;
+
+        if (progressService != null)
+            progressService.ProgressChanged -= Refresh;
 
         view.OpenStageSelectClicked += OnOpenStageSelectClicked;
         view.CloseStageSelectClicked += OnCloseStageSelectClicked;
         view.PreviousPageClicked += OnPreviousPageClicked;
         view.NextPageClicked += OnNextPageClicked;
+        view.PlayCurrentStageClicked += OnPlayCurrentStageClicked;
         view.StageClicked += OnStageClicked;
+
+        if (progressService != null)
+            progressService.ProgressChanged += Refresh;
     }
 
     private void Unbind()
@@ -72,7 +80,11 @@ public class StageSelectPresenter : MonoBehaviour
         view.CloseStageSelectClicked -= OnCloseStageSelectClicked;
         view.PreviousPageClicked -= OnPreviousPageClicked;
         view.NextPageClicked -= OnNextPageClicked;
+        view.PlayCurrentStageClicked -= OnPlayCurrentStageClicked;
         view.StageClicked -= OnStageClicked;
+
+        if (progressService != null)
+            progressService.ProgressChanged -= Refresh;
     }
 
     private void OnOpenStageSelectClicked()
@@ -117,18 +129,15 @@ public class StageSelectPresenter : MonoBehaviour
         Refresh();
     }
 
+    private void OnPlayCurrentStageClicked()
+    {
+        int currentStageIndex = GetCurrentStageIndex();
+        PlayStage(currentStageIndex);
+    }
+
     private void OnStageClicked(int stageIndex)
     {
-        ResolveReferences();
-
-        if (!IsStageAvailable(stageIndex))
-            return;
-
-        if (progressService != null)
-            progressService.SelectStageForPlay(stageIndex);
-
-        PlayUiSound();
-        SceneManager.LoadScene(InGameSceneName);
+        PlayStage(stageIndex);
     }
 
     private void Refresh()
@@ -138,11 +147,13 @@ public class StageSelectPresenter : MonoBehaviour
             return;
 
         int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
-        int currentStageIndex = progressService == null ? 0 : Mathf.Clamp(progressService.CurrentStageIndex, 0, Mathf.Max(0, stageCount - 1));
+        int currentStageIndex = GetCurrentStageIndex();
+        bool canPlayCurrentStage = stageCount > 0 && IsStageAvailable(currentStageIndex);
         pageStartStageIndex = ClampPageStartStageIndex(pageStartStageIndex, stageCount);
 
         view.SetPageStartStageIndex(pageStartStageIndex);
         view.SetCurrentStageText(currentStageIndex, stageCount);
+        view.SetCurrentStageButton(currentStageIndex, stageCount, canPlayCurrentStage);
 
         int buttonCount = view.StageButtonCount;
         for (int i = 0; i < buttonCount; i++)
@@ -156,6 +167,30 @@ public class StageSelectPresenter : MonoBehaviour
         bool canMovePrevious = pageStartStageIndex > 0;
         bool canMoveNext = pageStartStageIndex + stagesPerPage < stageCount;
         view.SetPageButtons(canMovePrevious, canMoveNext);
+    }
+
+    private int GetCurrentStageIndex()
+    {
+        ResolveReferences();
+
+        int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
+        int maxStageIndex = Mathf.Max(0, stageCount - 1);
+        int currentStageIndex = progressService == null ? 0 : progressService.CurrentStageIndex;
+        return Mathf.Clamp(currentStageIndex, 0, maxStageIndex);
+    }
+
+    private void PlayStage(int stageIndex)
+    {
+        ResolveReferences();
+
+        if (!IsStageAvailable(stageIndex))
+            return;
+
+        if (progressService != null)
+            progressService.SelectStageForPlay(stageIndex);
+
+        PlayUiSound();
+        SceneManager.LoadScene(InGameSceneName);
     }
 
     private int ClampPageStartStageIndex(int stageIndex, int stageCount)

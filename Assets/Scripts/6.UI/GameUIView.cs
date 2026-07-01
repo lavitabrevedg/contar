@@ -11,6 +11,7 @@ public class GameUIView : MonoBehaviour
 
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private TMP_Text stageText;
+    [SerializeField] private TMP_Text exitConditionText;
     [SerializeField] private TMP_Text skipTicketText;
     [SerializeField] private CanvasGroup clearPanel;
     [SerializeField] private Button retryButton;
@@ -93,6 +94,24 @@ public class GameUIView : MonoBehaviour
         }
 
         stageText.text = $"Stage {stageNumber}/{stageCount}";
+    }
+
+    public void SetExitCondition(ExitCondition exitCondition)
+    {
+        if (exitConditionText == null) return;
+
+        switch (exitCondition)
+        {
+            case ExitCondition.OddOnly:
+                exitConditionText.text = "Exit: Odd Moves";
+                break;
+            case ExitCondition.EvenOnly:
+                exitConditionText.text = "Exit: Even Moves";
+                break;
+            default:
+                exitConditionText.text = "Exit: Any";
+                break;
+        }
     }
 
     public void SetSkipTicketCount(int skipTicketCount, int maxSkipTicketCount)

@@ -22,6 +22,22 @@ public abstract class BaseTile : MonoBehaviour
         labelText.text = hasText ? text : string.Empty;
     }
 
+    protected void ConfigureTileLabelStyle(Color color, float fontSizeMax, Vector2 sizeDelta, Vector3 localPosition)
+    {
+        EnsureLabelText();
+
+        if (labelText == null) return;
+
+        labelText.color = color;
+        labelText.fontStyle = FontStyles.Bold;
+        labelText.fontSizeMax = fontSizeMax;
+
+        if (labelText.rectTransform != null)
+            labelText.rectTransform.sizeDelta = sizeDelta;
+
+        labelText.transform.localPosition = localPosition;
+    }
+
     protected void ClearTileLabelAnimated()
     {
         EnsureLabelText();
