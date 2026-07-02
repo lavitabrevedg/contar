@@ -11,6 +11,7 @@ public struct MoveResult
     public NumberObstacle pushedObstacle;
     public Vector2Int obstacleFrom;
     public Vector2Int obstacleTarget;
+    public bool destroysPushedObstacle;
     public string blockReason;
 
     public static MoveResult Blocked(string reason)
@@ -67,8 +68,9 @@ public class MoveResolver
             if (behindTile == null)
                 return MoveResult.Blocked("장애물을 맵 바깥으로 밀 수 없음");
 
-            if (!(behindTile is EmptyTile))
-                return MoveResult.Blocked("장애물은 Empty 타일 위로만 밀 수 있음");
+            bool destroysPushedObstacle = behindTile is WallTile;
+            if (!(behindTile is EmptyTile) && !destroysPushedObstacle)
+                return MoveResult.Blocked("장애물은 Empty 또는 Wall 타일 쪽으로만 밀 수 있음");
 
             if (currentMoveCount < obstacle.value)
                 return MoveResult.Blocked("이동 횟수 부족 (밀기 비용)");
@@ -80,6 +82,7 @@ public class MoveResolver
             result.pushedObstacle = obstacle;
             result.obstacleFrom = targetGrid;
             result.obstacleTarget = behindPos;
+            result.destroysPushedObstacle = destroysPushedObstacle;
             return result;
         }
 

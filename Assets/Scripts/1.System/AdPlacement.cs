@@ -1,5 +1,4 @@
 public enum AdPlacement
 {
-    RetryAfterFailures,
-    RestartStage
+    ReviveBonusMoves
 }

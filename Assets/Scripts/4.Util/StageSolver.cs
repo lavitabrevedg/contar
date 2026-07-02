@@ -8,6 +8,7 @@ using System.IO;
 public static class StageSolver
 {
     private const string StagesFolder = "Assets/Data/Stages";
+    private const int DestroyedObstacleIndex = 0x7F;
     private const int LooseThreshold = 5; // 여유 이 값 이상이면 "너무 후함"
 
     [MenuItem("contar/Validate All Stages")]
@@ -217,7 +218,7 @@ public static class StageSolver
 
                 int obstacleIndex = -1;
                 for (int i = 0; i < obstacleCount; i++)
-                    if (obstacleBuffer[i] == nextIndex) { obstacleIndex = i; break; }
+                    if (obstacleBuffer[i] != DestroyedObstacleIndex && obstacleBuffer[i] == nextIndex) { obstacleIndex = i; break; }
 
                 if (obstacleIndex >= 0)
                 {
@@ -225,12 +226,13 @@ public static class StageSolver
                     int behindX = nextX + dx[d];
                     int behindY = nextY + dy[d];
                     if (behindX < 0 || behindX >= width || behindY < 0 || behindY >= height) continue;
-                    if (types[behindX, behindY] != TileType.Empty) continue;
+                    bool destroysObstacle = types[behindX, behindY] == TileType.Wall;
+                    if (types[behindX, behindY] != TileType.Empty && !destroysObstacle) continue;
 
                     int behindIndex = behindY * width + behindX;
                     bool behindBlocked = false;
                     for (int i = 0; i < obstacleCount; i++)
-                        if (obstacleBuffer[i] == behindIndex) { behindBlocked = true; break; }
+                        if (obstacleBuffer[i] != DestroyedObstacleIndex && obstacleBuffer[i] == behindIndex) { behindBlocked = true; break; }
                     if (behindBlocked) continue;
 
                     int cost = obsValue[obstacleIndex];
@@ -238,7 +240,8 @@ public static class StageSolver
 
                     long nextObstaclePacked = cur.obstaclePacked;
                     nextObstaclePacked &= ~(((long)0x7F) << (obstacleIndex * 7));
-                    nextObstaclePacked |=  ((long)behindIndex)  << (obstacleIndex * 7);
+                    int nextObstacleIndex = destroysObstacle ? DestroyedObstacleIndex : behindIndex;
+                    nextObstaclePacked |=  ((long)nextObstacleIndex)  << (obstacleIndex * 7);
 
                     State next = new State
                     {

@@ -14,6 +14,7 @@ public class GameUIPresenter : MonoBehaviour
     public event Action RetryRequested;
     public event Action NextStageRequested;
     public event Action AdSkipTicketRequested;
+    public event Action RestartRequested;
     public event Action LobbyRequested;
 
     private void Awake()
@@ -54,7 +55,7 @@ public class GameUIPresenter : MonoBehaviour
             progressService = FindFirstObjectByType<StageProgressService>();
 
         if (stageCatalog == null)
-            stageCatalog = Resources.Load<StageCatalog>("StageCatalog");
+            stageCatalog = Resources.Load<StageCatalog>("SettingDatas/StageCatalog");
     }
 
     private void Bind()
@@ -128,7 +129,7 @@ public class GameUIPresenter : MonoBehaviour
             view.SetExitCondition(GetCurrentExitCondition());
             view.SetSkipTicketCount(0, 0);
             view.SetNextStageAvailable(false);
-            view.SetRetryButtonLabel("Retry");
+            view.SetRetryButtonState(false, false, "Watch Ad +2");
             view.SetSkipButtonState(false, false, "No Skip Tickets");
             return;
         }
@@ -136,17 +137,16 @@ public class GameUIPresenter : MonoBehaviour
         int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
         int stageNumber = stageCount <= 0 ? 0 : Mathf.Clamp(progressService.CurrentStageIndex + 1, 1, stageCount);
         bool hasNextStage = stageCount > 0 && progressService.CurrentStageIndex + 1 < stageCount;
-        bool isAdRequired = progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex);
+        bool canShowReviveAd = !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
         bool hasAdSkipTicket = progressService.HasAdSkipTicket;
-        string retryLabel = isAdRequired ? "Watch Ad" : "Retry";
-        string skipLabel = hasAdSkipTicket ? $"Use Skip Ticket ({progressService.SkipTicketCount})" : "No Skip Tickets";
+        string skipLabel = hasAdSkipTicket ? $"Use Skip Ticket +2 ({progressService.SkipTicketCount})" : "No Skip Tickets";
 
         view.SetStageInfo(stageNumber, stageCount);
         view.SetExitCondition(GetCurrentExitCondition());
         view.SetSkipTicketCount(progressService.SkipTicketCount, progressService.MaxSkipTicketCountValue);
         view.SetNextStageAvailable(hasNextStage);
-        view.SetRetryButtonLabel(retryLabel);
-        view.SetSkipButtonState(isAdRequired, hasAdSkipTicket, skipLabel);
+        view.SetRetryButtonState(canShowReviveAd, canShowReviveAd, "Watch Ad +2");
+        view.SetSkipButtonState(true, hasAdSkipTicket, skipLabel);
     }
 
     private ExitCondition GetCurrentExitCondition()
@@ -225,6 +225,12 @@ public class GameUIPresenter : MonoBehaviour
 
     private void OnLobbyClicked()
     {
+        if (stateModel != null && stateModel.State == GameState.Failed)
+        {
+            RestartRequested?.Invoke();
+            return;
+        }
+
         LobbyRequested?.Invoke();
     }
 

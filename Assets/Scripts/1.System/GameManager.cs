@@ -86,7 +86,10 @@ public class GameManager : MonoBehaviour
             if (audioService != null)
                 audioService.PlayPush();
 
-            mapGenerator.SwapTiles(result.obstacleFrom, result.obstacleTarget);
+            if (result.destroysPushedObstacle)
+                mapGenerator.ReplaceTileWithEmpty(result.obstacleFrom);
+            else
+                mapGenerator.SwapTiles(result.obstacleFrom, result.obstacleTarget);
 
             if (State == GameState.Playing && CurrentMoveCount <= 0)
                 Fail();
@@ -115,6 +118,16 @@ public class GameManager : MonoBehaviour
     public void AddMoveCount(int delta)
     {
         stateModel.AddMoveCount(delta);
+    }
+
+    public bool ContinueWithBonusMoves(int bonusMoveCount)
+    {
+        if (State != GameState.Failed)
+            return false;
+
+        stateModel.ContinueWithBonusMoves(bonusMoveCount);
+        Debug.Log($"[GameManager] Continued with bonus moves. bonusMoveCount={bonusMoveCount}");
+        return true;
     }
 
     public void RestartStage()
@@ -173,18 +186,14 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Playing) return;
 
         int stageIndex = GetCurrentStageIndex();
-        int failureCount = 0;
 
-        if (progressService != null)
-            failureCount = progressService.RecordFailure(stageIndex);
-
-        LastFailureCount = failureCount;
+        LastFailureCount = 0;
         stateModel.Fail();
         if (audioService != null)
             audioService.PlayFail();
 
-        StageFailed?.Invoke(stageIndex, failureCount);
-        Debug.Log($"[GameManager] Stage failed. stageIndex={stageIndex}, failureCount={failureCount}");
+        StageFailed?.Invoke(stageIndex, LastFailureCount);
+        Debug.Log($"[GameManager] Stage failed. stageIndex={stageIndex}");
     }
 
     public void NotifyExitBlocked(ExitCondition condition)

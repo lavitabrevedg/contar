@@ -9,7 +9,7 @@ public static class ProgressFeatureSmokeTest
     private const string SkipTicketCountKey = "contar.progress.skipTicketCount";
     private const string FailureStageIndexKey = "contar.progress.failureStageIndex";
     private const string FailureCountKey = "contar.progress.failureCount";
-    private const string CatalogPath = "Assets/Resources/StageCatalog.asset";
+    private const string CatalogPath = "Assets/Resources/SettingDatas/StageCatalog.asset";
 
     [MenuItem("contar/Run Progress Feature Smoke Test")]
     private static void RunFromMenu()
@@ -33,31 +33,21 @@ public static class ProgressFeatureSmokeTest
             AssertTrue(progressService.ShouldSuppressAds(0), "stage 0 should suppress ads");
             AssertTrue(progressService.ShouldSuppressAds(5), "stage 5 should suppress ads");
             AssertTrue(!progressService.ShouldSuppressAds(6), "stage 6 should allow ads");
-            AssertEqual(0, progressService.RecordFailure(0), "ad-free stage failure should not count");
-            AssertEqual(0, progressService.RecordFailure(5), "last ad-free stage failure should not count");
 
             StageClearProgressResult firstReward = progressService.MarkStageCleared(2);
             AssertTrue(firstReward.WasNewClear, "stage 2 should be a new clear");
             AssertTrue(firstReward.GrantedSkipTicket, "stage 2 should grant an ad skip ticket");
             AssertEqual(4, firstReward.SkipTicketCount, "ad skip ticket after third clear");
-            AssertEqual(0, progressService.FailureCount, "stage clear should not change failure count");
 
             StageClearProgressResult duplicateReward = progressService.MarkStageCleared(2);
             AssertTrue(!duplicateReward.WasNewClear, "duplicate clear should not be new");
             AssertTrue(!duplicateReward.GrantedSkipTicket, "duplicate clear should not grant");
             AssertEqual(4, duplicateReward.SkipTicketCount, "ad skip ticket after duplicate clear");
 
-            int firstFailureCount = progressService.RecordFailure(7);
-            int secondFailureCount = progressService.RecordFailure(8);
-            AssertEqual(1, firstFailureCount, "first failure count");
-            AssertEqual(2, secondFailureCount, "second failure count");
-
             progressService.SetCurrentStage(6);
-            AssertEqual(2, progressService.FailureCount, "stage change should keep global failure count");
             int stageBeforeAdSkipTicket = progressService.CurrentStageIndex;
             AssertTrue(progressService.TryUseAdSkipTicket(), "first ad skip ticket should be usable");
             AssertEqual(stageBeforeAdSkipTicket, progressService.CurrentStageIndex, "ad skip ticket should not advance the stage");
-            AssertEqual(2, progressService.FailureCount, "ad skip ticket should not reset failure count");
             AssertTrue(progressService.TryUseAdSkipTicket(), "second ad skip ticket should be usable");
             AssertTrue(progressService.TryUseAdSkipTicket(), "third ad skip ticket should be usable");
             AssertTrue(progressService.TryUseAdSkipTicket(), "fourth ad skip ticket should be usable");
@@ -65,19 +55,20 @@ public static class ProgressFeatureSmokeTest
             AssertEqual(0, progressService.SkipTicketCount, "ad skip ticket after uses");
 
             AssertTrue(!progressService.ShouldSuppressAds(progressService.CurrentStageIndex), "stage 6 should allow ads");
-            AssertTrue(!progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex), "two global failures should not require ad");
-            int thirdFailureCount = progressService.RecordFailure(6);
-            AssertEqual(3, thirdFailureCount, "third global failure should count");
-            AssertTrue(progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex), "third global failure should require ad");
             bool usedAdSkipTicketAtZero = progressService.TryUseAdSkipTicket();
             AssertTrue(!usedAdSkipTicketAtZero, "ad skip ticket should still be unavailable at zero");
             AssertEqual(stageBeforeAdSkipTicket, progressService.CurrentStageIndex, "failed ad skip ticket use should not advance the stage");
-            AssertEqual(3, progressService.FailureCount, "failed ad skip ticket use should not reset failure count");
 
             StageProgressSnapshot snapshot = progressService.CreateSnapshot();
-            AssertEqual(3, snapshot.failureCount, "snapshot should include failure count");
-            progressService.ResetFailureCount();
-            AssertEqual(0, progressService.FailureCount, "ad success reset should clear failure count");
+            string snapshotJson = JsonUtility.ToJson(snapshot);
+            AssertTrue(!snapshotJson.Contains("failureCount"), "snapshot should not include failure count");
+            AssertTrue(snapshotJson.Contains("highestClearedStageIndex"), "snapshot should include highest clear");
+            AssertTrue(snapshotJson.Contains("skipTicketCount"), "snapshot should include skip ticket count");
+            AssertTrue(snapshotJson.Contains("updatedAtUtcTicks"), "snapshot should include update timestamp");
+
+            PlayerPrefs.SetInt(FailureCountKey, 9);
+            progressService.ResetProgress();
+            AssertTrue(!PlayerPrefs.HasKey(FailureCountKey), "reset should clear legacy failure count key");
 
             ProgressFeatureSetup.SyncStageCatalog();
             StageCatalog catalog = AssetDatabase.LoadAssetAtPath<StageCatalog>(CatalogPath);
@@ -88,7 +79,7 @@ public static class ProgressFeatureSmokeTest
             AssertTrue(foundFirstStage, "first stage should load");
             AssertTrue(firstStage != null, "first stage should not be null");
 
-            Debug.Log("[ProgressFeatureSmokeTest] Passed. Manual checks: Stage 1-6 hide the ad skip ticket button on fail, Stage 7+ shows Ad View and Skip Ticket when tickets exist, and MapGenerator.mapData overrides PlayerPrefs only for initial loading.");
+            Debug.Log("[ProgressFeatureSmokeTest] Passed. Manual checks: Stage 1-6 hide revive ads on fail, Stage 7+ can show Watch Ad +2, Skip Ticket +2 spends one ticket, and result panels block background UI input.");
         }
         finally
         {

@@ -35,7 +35,7 @@ public class StageSelectPresenter : MonoBehaviour
             view = GetComponent<StageSelectView>();
 
         if (stageCatalog == null)
-            stageCatalog = Resources.Load<StageCatalog>("StageCatalog");
+            stageCatalog = Resources.Load<StageCatalog>("SettingDatas/StageCatalog");
 
         if (progressService == null)
             progressService = FindFirstObjectByType<StageProgressService>();

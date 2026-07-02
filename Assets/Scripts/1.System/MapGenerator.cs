@@ -112,6 +112,31 @@ public class MapGenerator : MonoBehaviour
         MoveTileTransform(tileB, GridToWorld(a.x, a.y));
     }
 
+    public void ReplaceTileWithEmpty(Vector2Int position)
+    {
+        if (grid == null) return;
+        if (mapData == null) return;
+        if (position.x < 0 || position.y < 0 || position.x >= mapData.width || position.y >= mapData.height)
+            return;
+
+        BaseTile previousTile = grid[position.x, position.y];
+        if (previousTile != null)
+        {
+            previousTile.transform.DOKill();
+            previousTile.gameObject.SetActive(false);
+            if (Application.isPlaying)
+                Destroy(previousTile.gameObject);
+            else
+                DestroyImmediate(previousTile.gameObject);
+        }
+
+        grid[position.x, position.y] = null;
+
+        SerializedTile emptyTile = default;
+        emptyTile.type = TileType.Empty;
+        CreateTile(position.x, position.y, emptyTile);
+    }
+
     private void MoveTileTransform(BaseTile tile, Vector3 targetPosition)
     {
         if (tile == null)

@@ -14,34 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapData
   width: 7
   height: 7
-  startMoveCount: 5
+  startMoveCount: 9
   rows:
   - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
     - type: 2
       value: 0
       exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
@@ -70,13 +48,13 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 5
+    - type: 0
       value: 0
       exitCondition: 0
-    - type: 5
+    - type: 0
       value: 0
       exitCondition: 0
-    - type: 5
+    - type: 0
       value: 0
       exitCondition: 0
     - type: 5
@@ -86,14 +64,58 @@ MonoBehaviour:
     - type: 5
       value: 0
       exitCondition: 0
-    - type: 3
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
       value: 8
       exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
+    - type: 4
+      value: 1
+      exitCondition: 0
     - type: 0
       value: 0
+      exitCondition: 0
+    - type: 3
+      value: 8
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 4
+      value: 1
       exitCondition: 0
     - type: 0
       value: 0
@@ -105,47 +127,25 @@ MonoBehaviour:
       value: 0
       exitCondition: 0
   - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
     - type: 1
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
       value: 0
       exitCondition: 0
   - values:

@@ -31,7 +31,7 @@ MonoBehaviour:
       value: 0
       exitCondition: 0
     - type: 0
-      value: 0
+      value: 1
       exitCondition: 0
     - type: 0
       value: 0

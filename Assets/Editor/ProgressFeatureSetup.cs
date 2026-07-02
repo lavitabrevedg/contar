@@ -5,9 +5,11 @@ using UnityEngine;
 
 public static class ProgressFeatureSetup
 {
+    private const int MaxCatalogStageCount = 24;
     private const string StagesFolder = "Assets/Data/Stages";
     private const string ResourcesFolder = "Assets/Resources";
-    private const string CatalogPath = "Assets/Resources/StageCatalog.asset";
+    private const string SettingDatasFolder = "Assets/Resources/SettingDatas";
+    private const string CatalogPath = "Assets/Resources/SettingDatas/StageCatalog.asset";
 
     public static void SyncStageCatalog()
     {
@@ -27,7 +29,7 @@ public static class ProgressFeatureSetup
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log($"[ProgressFeatureSetup] StageCatalog synced. count={stages.Length}");
+        Debug.Log($"[ProgressFeatureSetup] StageCatalog synced. path={CatalogPath}, count={stages.Length}");
     }
 
     [MenuItem("contar/Sync Stage Catalog")]
@@ -38,10 +40,11 @@ public static class ProgressFeatureSetup
 
     private static void EnsureResourcesFolder()
     {
-        if (AssetDatabase.IsValidFolder(ResourcesFolder))
-            return;
+        if (!AssetDatabase.IsValidFolder(ResourcesFolder))
+            AssetDatabase.CreateFolder("Assets", "Resources");
 
-        AssetDatabase.CreateFolder("Assets", "Resources");
+        if (!AssetDatabase.IsValidFolder(SettingDatasFolder))
+            AssetDatabase.CreateFolder(ResourcesFolder, "SettingDatas");
     }
 
     private static MapData[] LoadStages()
@@ -60,6 +63,9 @@ public static class ProgressFeatureSetup
         }
 
         stages.Sort(CompareStageNames);
+        if (stages.Count > MaxCatalogStageCount)
+            stages.RemoveRange(MaxCatalogStageCount, stages.Count - MaxCatalogStageCount);
+
         return stages.ToArray();
     }
 

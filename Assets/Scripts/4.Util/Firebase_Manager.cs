@@ -173,13 +173,31 @@ public partial class Firebase_Manager : MonoBehaviour
         });
     }
 
-    public void WriteData()
+    public bool WriteData()
     {
         if (!CanUseDatabase())
-            return;
+            return false;
 
         progressService.EnsurePersistentTimestamp();
-        StageProgressSnapshot progress = progressService.CreateSnapshot();
+        return WriteSnapshot(progressService.CreateSnapshot());
+    }
+
+    public bool WriteData(StageProgressSnapshot progress)
+    {
+        if (!CanUseDatabase())
+            return false;
+
+        if (progress == null)
+        {
+            Debug.LogWarning("[Firebase_Manager] 데이터 쓰기 실패: progress snapshot is null.");
+            return false;
+        }
+
+        return WriteSnapshot(progress);
+    }
+
+    private bool WriteSnapshot(StageProgressSnapshot progress)
+    {
         string json = JsonUtility.ToJson(progress);
 
         userProgressReference.SetRawJsonValueAsync(json).ContinueWithOnMainThread(task =>
@@ -192,6 +210,8 @@ public partial class Firebase_Manager : MonoBehaviour
 
             Debug.Log("[Firebase_Manager] 데이터 쓰기 성공.");
         });
+
+        return true;
     }
 
     private void PrepareUserProgressReference()
@@ -205,17 +225,32 @@ public partial class Firebase_Manager : MonoBehaviour
     private bool CanUseDatabase()
     {
         if (!isInitialized)
+        {
+            Debug.LogWarning("[Firebase_Manager] Database is not ready: Firebase is not initialized.");
             return false;
+        }
 
         if (currentUser == null)
+        {
+            Debug.LogWarning("[Firebase_Manager] Database is not ready: current user is missing.");
             return false;
+        }
 
         if (userProgressReference == null)
+        {
+            Debug.LogWarning("[Firebase_Manager] Database is not ready: user progress reference is missing.");
             return false;
+        }
 
         ResolveProgressService();
 
-        return progressService != null;
+        if (progressService == null)
+        {
+            Debug.LogWarning("[Firebase_Manager] Database is not ready: StageProgressService is missing.");
+            return false;
+        }
+
+        return true;
     }
 
     private bool ShouldUseRemoteProgress(StageProgressSnapshot remoteProgress, StageProgressSnapshot localProgress)

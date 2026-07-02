@@ -12,161 +12,87 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f3a8d5c75258784894d732a597a2f86, type: 3}
   m_Name: Stage_007
   m_EditorClassIdentifier: Assembly-CSharp::MapData
-  width: 7
-  height: 7
-  startMoveCount: 1
+  width: 5
+  height: 5
+  startMoveCount: 3
   rows:
   - values:
-    - type: 5
+    - type: 0
       value: 0
       exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 1
+    - type: 0
       value: 0
       exitCondition: 0
     - type: 3
-      value: 2
+      value: 5
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 1
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 0
+      exitCondition: 2
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
       exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
     - type: 2
       value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
+      exitCondition: 2

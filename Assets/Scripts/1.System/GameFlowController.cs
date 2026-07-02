@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class GameFlowController : MonoBehaviour
 {
+    private const int ReviveBonusMoveCount = 2;
+
     [SerializeField] private GameUIPresenter uiPresenter;
     [SerializeField] private GameManager gameManager;
     [SerializeField] private StageCatalog stageCatalog;
@@ -56,7 +58,7 @@ public class GameFlowController : MonoBehaviour
             progressService = gameManager.gameObject.AddComponent<StageProgressService>();
 
         if (stageCatalog == null)
-            stageCatalog = Resources.Load<StageCatalog>("StageCatalog");
+            stageCatalog = Resources.Load<StageCatalog>("SettingDatas/StageCatalog");
 
         ResolveAdService();
     }
@@ -92,10 +94,12 @@ public class GameFlowController : MonoBehaviour
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
         uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
+        uiPresenter.RestartRequested -= OnRestartRequested;
         uiPresenter.LobbyRequested -= OnLobbyRequested;
         uiPresenter.RetryRequested += OnRetryRequested;
         uiPresenter.NextStageRequested += OnNextStageRequested;
         uiPresenter.AdSkipTicketRequested += OnAdSkipTicketRequested;
+        uiPresenter.RestartRequested += OnRestartRequested;
         uiPresenter.LobbyRequested += OnLobbyRequested;
 
         isBound = true;
@@ -108,6 +112,7 @@ public class GameFlowController : MonoBehaviour
         uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
         uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
+        uiPresenter.RestartRequested -= OnRestartRequested;
         uiPresenter.LobbyRequested -= OnLobbyRequested;
 
         isBound = false;
@@ -119,8 +124,9 @@ public class GameFlowController : MonoBehaviour
             ResolveReferences();
 
         if (gameManager == null) return;
+        if (gameManager.State != GameState.Failed) return;
 
-        RestartStageAfterAdChoice();
+        ShowAdThenRun(AdPlacement.ReviveBonusMoves, ContinueWithReviveBonusMoves);
     }
 
     private void OnNextStageRequested()
@@ -135,25 +141,32 @@ public class GameFlowController : MonoBehaviour
 
         if (gameManager == null)
         {
-            Debug.LogWarning("[GameFlowController] Cannot restart stage because GameManager is missing.");
+            Debug.LogWarning("[GameFlowController] Cannot continue because GameManager is missing.");
             return;
         }
 
-        if (!IsFailureRetryAdRequiredForCurrentStage())
-        {
-            gameManager.RestartStage();
+        if (gameManager.State != GameState.Failed)
             return;
-        }
 
         if (progressService != null && progressService.TryUseAdSkipTicket())
         {
-            gameManager.RestartStage();
+            ContinueWithReviveBonusMoves();
             return;
         }
 
-        Debug.Log("[GameFlowController] Cannot skip ad because there are no skip tickets.");
+        Debug.Log("[GameFlowController] Cannot continue because there are no skip tickets.");
         if (uiPresenter != null)
             uiPresenter.RefreshProgressView();
+    }
+
+    private void OnRestartRequested()
+    {
+        if (gameManager == null)
+            ResolveReferences();
+
+        if (gameManager == null) return;
+
+        gameManager.RestartStage();
     }
 
     private void OnLobbyRequested()
@@ -257,29 +270,12 @@ public class GameFlowController : MonoBehaviour
         return false;
     }
 
-    private void RestartStageAfterAdChoice()
+    private void ContinueWithReviveBonusMoves()
     {
         if (gameManager == null)
             return;
 
-        if (!IsFailureRetryAdRequiredForCurrentStage())
-        {
-            gameManager.RestartStage();
-            return;
-        }
-
-        ShowAdThenRun(AdPlacement.RestartStage, gameManager.RestartStage);
-    }
-
-    private bool IsFailureRetryAdRequiredForCurrentStage()
-    {
-        if (progressService == null)
-            ResolveReferences();
-
-        if (progressService == null)
-            return false;
-
-        return progressService.ShouldShowAdForFailureRetry(progressService.CurrentStageIndex);
+        gameManager.ContinueWithBonusMoves(ReviveBonusMoveCount);
     }
 
     private void ShowAdThenRun(AdPlacement placement, Action completed)
@@ -293,14 +289,13 @@ public class GameFlowController : MonoBehaviour
         int stageIndex = progressService == null ? 0 : progressService.CurrentStageIndex;
         if (progressService == null || progressService.ShouldSuppressAds(stageIndex))
         {
-            completed?.Invoke();
+            Debug.Log($"[GameFlowController] Revive ad is unavailable for this stage. stageIndex={stageIndex}");
             return;
         }
 
         if (adService == null || !adService.IsReady(placement))
         {
             Debug.LogWarning($"[GameFlowController] Ad is not ready. placement={placement}");
-            completed?.Invoke();
             return;
         }
 
@@ -309,14 +304,10 @@ public class GameFlowController : MonoBehaviour
         {
             isShowingAd = false;
 
-            if (adSucceeded)
+            if (!adSucceeded)
             {
-                if (progressService != null)
-                    progressService.ResetFailureCount();
-            }
-            else
-            {
-                Debug.LogWarning($"[GameFlowController] Ad failed. Continuing without blocking. placement={placement}");
+                Debug.LogWarning($"[GameFlowController] Ad failed. Reward was not granted. placement={placement}");
+                return;
             }
 
             completed?.Invoke();

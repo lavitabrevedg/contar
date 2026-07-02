@@ -8,6 +8,8 @@ public class GameUIView : MonoBehaviour
 {
     private const float PrimaryButtonY = -159.3f;
     private const float SecondaryButtonY = -353.3f;
+    private const float FailSecondaryButtonY = -333.3f;
+    private const float FailTertiaryButtonY = -507.3f;
 
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private TMP_Text stageText;
@@ -29,10 +31,16 @@ public class GameUIView : MonoBehaviour
 
     private string retryButtonDefaultLabel;
     private string nextButtonDefaultLabel;
+    private string lobbyButtonDefaultLabel;
+    private TMP_Text lobbyButtonText;
     private bool isShowingFailResult;
+    private bool retryButtonShouldBeVisible = true;
+    private bool retryButtonShouldInteract = true;
+    private string retryButtonLabel = "Watch Ad +2";
     private bool skipButtonShouldBeVisible = true;
     private bool skipButtonShouldInteract;
     private string skipButtonLabel = "No Skip Tickets";
+    private GameObject resultInputBlocker;
 
     public event Action RetryClicked;
     public event Action NextClicked;
@@ -134,11 +142,16 @@ public class GameUIView : MonoBehaviour
 
     public void SetRetryButtonLabel(string label)
     {
-        CacheButtonLabels();
+        SetRetryButtonState(true, true, label);
+    }
 
-        if (retryButtonText == null) return;
+    public void SetRetryButtonState(bool isVisible, bool isInteractable, string label)
+    {
+        retryButtonShouldBeVisible = isVisible;
+        retryButtonShouldInteract = isInteractable;
+        retryButtonLabel = label;
 
-        retryButtonText.text = string.IsNullOrWhiteSpace(label) ? retryButtonDefaultLabel : label;
+        ApplyRetryButtonState();
     }
 
     public void SetSkipButtonState(bool isVisible, bool isInteractable, string label)
@@ -177,12 +190,35 @@ public class GameUIView : MonoBehaviour
             skipButtonText.text = skipButtonLabel;
     }
 
+    private void ApplyRetryButtonState()
+    {
+        if (retryButton == null) return;
+
+        bool shouldShowRetryButton = retryButtonShouldBeVisible && isShowingFailResult;
+        retryButton.gameObject.SetActive(shouldShowRetryButton);
+        retryButton.interactable = retryButtonShouldInteract && shouldShowRetryButton;
+
+        if (retryButtonText != null)
+            retryButtonText.text = string.IsNullOrWhiteSpace(retryButtonLabel) ? retryButtonDefaultLabel : retryButtonLabel;
+    }
+
     public void ShowClear()
     {
         isShowingFailResult = false;
         SetClearModeObjects();
         ShowPanel(clearPanel);
+        SetResultInputBlockerVisible(true);
+        ApplyRetryButtonState();
         ApplySkipButtonState();
+    }
+
+    public void SetLobbyButtonLabel(string label)
+    {
+        CacheButtonLabels();
+
+        if (lobbyButtonText == null) return;
+
+        lobbyButtonText.text = string.IsNullOrWhiteSpace(label) ? lobbyButtonDefaultLabel : label;
     }
 
     public void ShowFail()
@@ -190,6 +226,8 @@ public class GameUIView : MonoBehaviour
         isShowingFailResult = true;
         SetFailModeObjects();
         ShowPanel(clearPanel);
+        SetResultInputBlockerVisible(true);
+        ApplyRetryButtonState();
         ApplySkipButtonState();
     }
 
@@ -197,6 +235,8 @@ public class GameUIView : MonoBehaviour
     {
         isShowingFailResult = false;
         HidePanel(clearPanel);
+        SetResultInputBlockerVisible(false);
+        ApplyRetryButtonState();
         ApplySkipButtonState();
     }
 
@@ -219,6 +259,8 @@ public class GameUIView : MonoBehaviour
             lobbyButton.gameObject.SetActive(true);
             SetButtonAnchoredY(lobbyButton, SecondaryButtonY);
         }
+
+        SetLobbyButtonLabel(lobbyButtonDefaultLabel);
     }
 
     private void SetFailModeObjects()
@@ -239,16 +281,18 @@ public class GameUIView : MonoBehaviour
             nextButton.gameObject.SetActive(false);
 
         if (retryButton != null)
-        {
-            retryButton.gameObject.SetActive(true);
             SetButtonAnchoredY(retryButton, PrimaryButtonY);
-        }
 
         if (skipButton != null)
-            SetButtonAnchoredY(skipButton, SecondaryButtonY);
+            SetButtonAnchoredY(skipButton, retryButtonShouldBeVisible ? FailSecondaryButtonY : PrimaryButtonY);
 
         if (lobbyButton != null)
-            lobbyButton.gameObject.SetActive(false);
+        {
+            lobbyButton.gameObject.SetActive(true);
+            SetButtonAnchoredY(lobbyButton, retryButtonShouldBeVisible ? FailTertiaryButtonY : SecondaryButtonY);
+        }
+
+        SetLobbyButtonLabel("Restart");
     }
 
     private void SetButtonAnchoredY(Button button, float anchoredY)
@@ -287,6 +331,9 @@ public class GameUIView : MonoBehaviour
     {
         if (panel == null) return;
 
+        EnsureResultInputBlocker(panel);
+        SetResultInputBlockerVisible(true);
+
         panel.DOKill();
         panel.transform.DOKill();
 
@@ -305,6 +352,8 @@ public class GameUIView : MonoBehaviour
     private void HidePanel(CanvasGroup panel)
     {
         if (panel == null) return;
+
+        SetResultInputBlockerVisible(false);
 
         panel.DOKill();
         panel.transform.DOKill();
@@ -337,11 +386,64 @@ public class GameUIView : MonoBehaviour
             else
                 nextButtonDefaultLabel = "Next";
         }
+
+        if (string.IsNullOrEmpty(lobbyButtonDefaultLabel))
+        {
+            if (lobbyButtonText != null && !string.IsNullOrWhiteSpace(lobbyButtonText.text))
+                lobbyButtonDefaultLabel = lobbyButtonText.text;
+            else
+                lobbyButtonDefaultLabel = "Lobby";
+        }
     }
 
     private void ResolveButtonTextReferences()
     {
         if (retryButtonText == null && retryButton != null)
             retryButtonText = retryButton.GetComponentInChildren<TMP_Text>(true);
+
+        if (lobbyButtonText == null && lobbyButton != null)
+            lobbyButtonText = lobbyButton.GetComponentInChildren<TMP_Text>(true);
+    }
+
+    private void EnsureResultInputBlocker(CanvasGroup panel)
+    {
+        if (resultInputBlocker != null) return;
+        if (panel == null) return;
+        if (panel.transform.parent == null) return;
+
+        resultInputBlocker = new GameObject("ResultInputBlocker", typeof(RectTransform), typeof(Image));
+        resultInputBlocker.transform.SetParent(panel.transform.parent, false);
+
+        RectTransform blockerRect = resultInputBlocker.transform as RectTransform;
+        if (blockerRect != null)
+        {
+            blockerRect.anchorMin = Vector2.zero;
+            blockerRect.anchorMax = Vector2.one;
+            blockerRect.offsetMin = Vector2.zero;
+            blockerRect.offsetMax = Vector2.zero;
+            blockerRect.localScale = Vector3.one;
+        }
+
+        Image blockerImage = resultInputBlocker.GetComponent<Image>();
+        blockerImage.color = new Color(0f, 0f, 0f, 0.35f);
+        blockerImage.raycastTarget = true;
+
+        resultInputBlocker.SetActive(false);
+    }
+
+    private void SetResultInputBlockerVisible(bool isVisible)
+    {
+        EnsureResultInputBlocker(clearPanel);
+
+        if (resultInputBlocker == null)
+            return;
+
+        if (isVisible && clearPanel != null)
+        {
+            resultInputBlocker.transform.SetAsLastSibling();
+            clearPanel.transform.SetAsLastSibling();
+        }
+
+        resultInputBlocker.SetActive(isVisible);
     }
 }
