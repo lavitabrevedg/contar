@@ -5771,6 +5771,9 @@ MonoBehaviour:
   soundButtonText: {fileID: 0}
   hidePanelOnAwake: 1
   panelTweenDuration: 0.18
+  soundItemTweenDuration: 0.16
+  soundImageTweenDelay: 0.04
+  soundTextTweenDelay: 0.08
 --- !u!114 &1914569263
 MonoBehaviour:
   m_ObjectHideFlags: 0

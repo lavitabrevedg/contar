@@ -18,6 +18,12 @@ public class MapEditor : Editor
         map.height = EditorGUILayout.IntField("Height", map.height);
         map.startMoveCount = EditorGUILayout.IntField("StartMoveCount", map.startMoveCount);
 
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(map);
+            AssetDatabase.SaveAssetIfDirty(map);
+        }
+
         EditorGUILayout.Space();
 
         if (GUILayout.Button("Apply Grid Size"))

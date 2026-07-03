@@ -12,87 +12,102 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f3a8d5c75258784894d732a597a2f86, type: 3}
   m_Name: Stage_007
   m_EditorClassIdentifier: Assembly-CSharp::MapData
-  width: 5
+  width: 6
   height: 5
-  startMoveCount: 3
+  startMoveCount: 8
   rows:
   - values:
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
     - type: 3
-      value: 5
+      value: 8
       exitCondition: 0
     - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 0
-      value: 0
+      value: 1
       exitCondition: 0
     - type: 5
       value: 0
       exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 5
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-  - values:
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
-      value: 0
+    - type: 4
+      value: 1
       exitCondition: 0
     - type: 1
       value: 0
       exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
-    - type: 0
+    - type: 5
       value: 0
       exitCondition: 0
   - values:
+    - type: 4
+      value: 1
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
     - type: 5
       value: 0
       exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+  - values:
+    - type: 4
+      value: 1
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
+    - type: 0
+      value: 0
+      exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
     - type: 5
       value: 0
       exitCondition: 0
-    - type: 0
+    - type: 5
       value: 0
       exitCondition: 0
   - values:
     - type: 0
       value: 0
-      exitCondition: 2
-    - type: 0
+      exitCondition: 0
+    - type: 4
+      value: 1
+      exitCondition: 0
+    - type: 4
+      value: 1
+      exitCondition: 0
+    - type: 5
       value: 0
       exitCondition: 0
-    - type: 0
+    - type: 5
       value: 0
       exitCondition: 0
-    - type: 0
+    - type: 5
       value: 0
+      exitCondition: 0
+  - values:
+    - type: 0
+      value: 1
       exitCondition: 0
     - type: 2
       value: 0
-      exitCondition: 2
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0
+    - type: 5
+      value: 0
+      exitCondition: 0

@@ -72,6 +72,7 @@ public class StageSelectView : MonoBehaviour
             playCurrentStageButton.onClick.RemoveListener(NotifyPlayCurrentStageClicked);
 
         UnbindStageButtons();
+        KillPanelTweens();
     }
 
     public void SetPanelVisible(bool isVisible)
@@ -300,5 +301,14 @@ public class StageSelectView : MonoBehaviour
         label.raycastTarget = false;
 
         return button;
+    }
+
+    private void KillPanelTweens()
+    {
+        if (panel == null)
+            return;
+
+        panel.DOKill();
+        panel.transform.DOKill();
     }
 }

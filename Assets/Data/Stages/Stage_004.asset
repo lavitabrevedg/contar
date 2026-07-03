@@ -20,10 +20,10 @@ MonoBehaviour:
     - type: 0
       value: 0
       exitCondition: 0
-    - type: 0
-      value: 0
-      exitCondition: 0
     - type: 3
+      value: 1
+      exitCondition: 0
+    - type: 0
       value: 1
       exitCondition: 0
     - type: 2
@@ -50,7 +50,7 @@ MonoBehaviour:
       value: 0
       exitCondition: 0
     - type: 3
-      value: -1
+      value: 2
       exitCondition: 0
     - type: 0
       value: 0

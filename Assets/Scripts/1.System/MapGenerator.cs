@@ -1,4 +1,5 @@
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -21,6 +22,12 @@ public class MapGenerator : MonoBehaviour
     [Header("Grid Settings")]
     public float tileSize = 1f;
     [SerializeField] private float tileMoveDuration = 0.12f;
+
+    [Header("Obstacle Break Effect")]
+    [SerializeField] private float obstacleBreakDuration = 0.18f;
+    [SerializeField] private float obstacleBreakScale = 1.16f;
+    [SerializeField] private float obstacleBreakShakeStrength = 0.08f;
+    [SerializeField] private float obstacleBreakFadeDelay = 0.04f;
 
     private BaseTile[,] grid;
 
@@ -74,7 +81,24 @@ public class MapGenerator : MonoBehaviour
     public void ClearMap()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
-            DestroyImmediate(transform.GetChild(i).gameObject);
+        {
+            Transform childTransform = transform.GetChild(i);
+            childTransform.DOKill();
+
+            BaseTile[] childTiles = childTransform.GetComponentsInChildren<BaseTile>(true);
+            for (int tileIndex = 0; tileIndex < childTiles.Length; tileIndex++)
+                childTiles[tileIndex].transform.DOKill();
+
+            SpriteRenderer[] spriteRenderers = childTransform.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int rendererIndex = 0; rendererIndex < spriteRenderers.Length; rendererIndex++)
+                spriteRenderers[rendererIndex].DOKill();
+
+            TMP_Text[] labelTexts = childTransform.GetComponentsInChildren<TMP_Text>(true);
+            for (int labelIndex = 0; labelIndex < labelTexts.Length; labelIndex++)
+                labelTexts[labelIndex].DOKill();
+
+            DestroyTileObject(childTransform.gameObject);
+        }
 
         grid = null;
     }
@@ -123,11 +147,11 @@ public class MapGenerator : MonoBehaviour
         if (previousTile != null)
         {
             previousTile.transform.DOKill();
-            previousTile.gameObject.SetActive(false);
-            if (Application.isPlaying)
-                Destroy(previousTile.gameObject);
+
+            if (Application.isPlaying && previousTile is NumberObstacle)
+                PlayObstacleBreakEffect(previousTile);
             else
-                DestroyImmediate(previousTile.gameObject);
+                DestroyTileObject(previousTile.gameObject);
         }
 
         grid[position.x, position.y] = null;
@@ -135,6 +159,47 @@ public class MapGenerator : MonoBehaviour
         SerializedTile emptyTile = default;
         emptyTile.type = TileType.Empty;
         CreateTile(position.x, position.y, emptyTile);
+    }
+
+    private void PlayObstacleBreakEffect(BaseTile obstacleTile)
+    {
+        if (obstacleTile == null)
+            return;
+
+        Transform obstacleTransform = obstacleTile.transform;
+        Vector3 startScale = obstacleTransform.localScale;
+
+        SpriteRenderer[] spriteRenderers = obstacleTile.GetComponentsInChildren<SpriteRenderer>(true);
+        TMP_Text[] labelTexts = obstacleTile.GetComponentsInChildren<TMP_Text>(true);
+
+        for (int rendererIndex = 0; rendererIndex < spriteRenderers.Length; rendererIndex++)
+            spriteRenderers[rendererIndex].sortingOrder += 20;
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.SetTarget(obstacleTransform);
+        sequence.Join(obstacleTransform.DOShakePosition(obstacleBreakDuration, obstacleBreakShakeStrength, 14, 90f, false, true));
+        sequence.Join(obstacleTransform.DOScale(startScale * obstacleBreakScale, obstacleBreakDuration * 0.45f).SetEase(Ease.OutBack));
+        sequence.Append(obstacleTransform.DOScale(Vector3.zero, obstacleBreakDuration * 0.65f).SetEase(Ease.InBack));
+
+        float fadeDuration = Mathf.Max(0.01f, obstacleBreakDuration - obstacleBreakFadeDelay);
+        for (int rendererIndex = 0; rendererIndex < spriteRenderers.Length; rendererIndex++)
+            sequence.Insert(obstacleBreakFadeDelay, spriteRenderers[rendererIndex].DOFade(0f, fadeDuration));
+
+        for (int labelIndex = 0; labelIndex < labelTexts.Length; labelIndex++)
+            sequence.Insert(obstacleBreakFadeDelay, labelTexts[labelIndex].DOFade(0f, fadeDuration));
+
+        sequence.OnComplete(() => DestroyTileObject(obstacleTile.gameObject));
+    }
+
+    private void DestroyTileObject(GameObject tileObject)
+    {
+        if (tileObject == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(tileObject);
+        else
+            DestroyImmediate(tileObject);
     }
 
     private void MoveTileTransform(BaseTile tile, Vector3 targetPosition)

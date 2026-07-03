@@ -82,6 +82,8 @@ public class GameUIView : MonoBehaviour
 
         if (lobbyButton != null)
             lobbyButton.onClick.RemoveListener(NotifyLobbyClicked);
+
+        KillResultPanelTweens();
     }
 
     public void SetMoveCount(int moveCount)
@@ -445,5 +447,14 @@ public class GameUIView : MonoBehaviour
         }
 
         resultInputBlocker.SetActive(isVisible);
+    }
+
+    private void KillResultPanelTweens()
+    {
+        if (clearPanel == null)
+            return;
+
+        clearPanel.DOKill();
+        clearPanel.transform.DOKill();
     }
 }

@@ -9,6 +9,16 @@ public abstract class BaseTile : MonoBehaviour
     public abstract void Init(SerializedTile data);
     public virtual void OnPlayerEnter() { }
 
+    protected virtual void OnDisable()
+    {
+        KillTweens();
+    }
+
+    protected virtual void OnDestroy()
+    {
+        KillTweens();
+    }
+
     protected void SetTileLabel(string text)
     {
         EnsureLabelText();
@@ -97,5 +107,16 @@ public abstract class BaseTile : MonoBehaviour
         MeshRenderer labelRenderer = labelText.GetComponent<MeshRenderer>();
         if (labelRenderer != null)
             labelRenderer.sortingOrder = 10;
+    }
+
+    private void KillTweens()
+    {
+        transform.DOKill();
+
+        if (labelText == null)
+            return;
+
+        labelText.transform.DOKill();
+        labelText.DOKill();
     }
 }
