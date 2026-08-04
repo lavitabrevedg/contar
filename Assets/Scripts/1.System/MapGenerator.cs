@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -29,11 +32,30 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] private float obstacleBreakShakeStrength = 0.08f;
     [SerializeField] private float obstacleBreakFadeDelay = 0.04f;
 
-    private BaseTile[,] grid;
+    [Header("Hint Route")]
+    [SerializeField] private float hintStepInterval = 0.18f;
+    [SerializeField] private GameObject hintEffectPrefab;
+    [SerializeField] private float hintEffectScale = 0.1f;
+    [SerializeField] private int hintEffectSortingOrder = 15;
 
-    private void Start()
+    [Header("Initial Map Reveal")]
+    [SerializeField] private float tileRevealDuration = 0.18f;
+    [SerializeField] private float playerRevealDuration = 0.18f;
+    [SerializeField] private float totalRevealDuration = 0.8f;
+    [SerializeField] private Ease tileRevealEase = Ease.OutBack;
+
+    private BaseTile[,] grid;
+    private Coroutine hintRouteCoroutine;
+    private readonly List<GameObject> activeHintEffects = new List<GameObject>();
+    private readonly Dictionary<Transform, Vector3> initialRevealScales = new Dictionary<Transform, Vector3>();
+    private Transform generatedPlayerTransform;
+    private Sequence initialRevealSequence;
+
+    public bool HasActiveHintRoute => hintRouteCoroutine != null || activeHintEffects.Count > 0;
+
+    private void OnDisable()
     {
-        GenerateMap();
+        StopInitialReveal(true);
     }
 
     public void SetMapData(MapData nextMapData, bool regenerate)
@@ -78,8 +100,97 @@ public class MapGenerator : MonoBehaviour
             cameraFitter.Fit();
     }
 
+    public void PlayInitialReveal(Action completed)
+    {
+        StopInitialReveal(true);
+
+        if (grid == null || mapData == null)
+        {
+            completed?.Invoke();
+            return;
+        }
+
+        List<Transform> tileTransforms = GetTileTransformsInRevealOrder();
+        if (tileTransforms.Count == 0)
+        {
+            completed?.Invoke();
+            return;
+        }
+
+        for (int tileIndex = 0; tileIndex < tileTransforms.Count; tileIndex++)
+            HideRevealTarget(tileTransforms[tileIndex]);
+
+        if (generatedPlayerTransform != null)
+            HideRevealTarget(generatedPlayerTransform);
+
+        float safeTileDuration = Mathf.Max(0.01f, tileRevealDuration);
+        float safePlayerDuration = Mathf.Max(0.01f, playerRevealDuration);
+        float safeTotalDuration = Mathf.Max(safeTileDuration + safePlayerDuration, totalRevealDuration);
+        float tileStartWindow = Mathf.Max(0f, safeTotalDuration - safeTileDuration - safePlayerDuration);
+        float tileInterval = tileTransforms.Count <= 1
+            ? 0f
+            : tileStartWindow / (tileTransforms.Count - 1);
+
+        initialRevealSequence = DOTween.Sequence();
+        initialRevealSequence.SetUpdate(true);
+        initialRevealSequence.SetTarget(transform);
+
+        for (int tileIndex = 0; tileIndex < tileTransforms.Count; tileIndex++)
+        {
+            Transform tileTransform = tileTransforms[tileIndex];
+            Vector3 targetScale = initialRevealScales[tileTransform];
+            initialRevealSequence.Insert(
+                tileIndex * tileInterval,
+                tileTransform.DOScale(targetScale, safeTileDuration).SetEase(tileRevealEase));
+        }
+
+        float playerStartTime = tileStartWindow + safeTileDuration;
+        if (generatedPlayerTransform != null && initialRevealScales.ContainsKey(generatedPlayerTransform))
+        {
+            Vector3 playerTargetScale = initialRevealScales[generatedPlayerTransform];
+            initialRevealSequence.Insert(
+                playerStartTime,
+                generatedPlayerTransform.DOScale(playerTargetScale, safePlayerDuration).SetEase(tileRevealEase));
+        }
+        else
+        {
+            initialRevealSequence.AppendInterval(safePlayerDuration);
+        }
+
+        initialRevealSequence.OnComplete(() =>
+        {
+            initialRevealSequence = null;
+            initialRevealScales.Clear();
+            completed?.Invoke();
+        });
+    }
+
+    public void StopInitialReveal(bool restoreScale)
+    {
+        if (initialRevealSequence != null)
+        {
+            initialRevealSequence.Kill(false);
+            initialRevealSequence = null;
+        }
+
+        if (restoreScale)
+        {
+            foreach (KeyValuePair<Transform, Vector3> revealScale in initialRevealScales)
+            {
+                if (revealScale.Key != null)
+                    revealScale.Key.localScale = revealScale.Value;
+            }
+        }
+
+        initialRevealScales.Clear();
+    }
+
     public void ClearMap()
     {
+        StopInitialReveal(true);
+        StopHintRoute();
+        generatedPlayerTransform = null;
+
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             Transform childTransform = transform.GetChild(i);
@@ -159,6 +270,113 @@ public class MapGenerator : MonoBehaviour
         SerializedTile emptyTile = default;
         emptyTile.type = TileType.Empty;
         CreateTile(position.x, position.y, emptyTile);
+    }
+
+    public bool TryCreatePuzzleSnapshot(
+        Vector2Int playerPosition,
+        int remainingMoves,
+        out PuzzleSnapshot puzzleSnapshot)
+    {
+        puzzleSnapshot = null;
+        if (mapData == null || grid == null)
+            return false;
+
+        List<Vector2Int> consumedMoveTiles = new List<Vector2Int>();
+        List<PuzzleObstacleState> currentObstacles = new List<PuzzleObstacleState>();
+
+        for (int y = 0; y < mapData.height; y++)
+        {
+            for (int x = 0; x < mapData.width; x++)
+            {
+                BaseTile tile = grid[x, y];
+                MoveTile moveTile = tile as MoveTile;
+                if (moveTile != null && moveTile.IsConsumed)
+                    consumedMoveTiles.Add(new Vector2Int(x, y));
+
+                NumberObstacle obstacle = tile as NumberObstacle;
+                if (obstacle != null)
+                {
+                    currentObstacles.Add(new PuzzleObstacleState(
+                        new Vector2Int(x, y),
+                        obstacle.value));
+                }
+            }
+        }
+
+        string errorMessage;
+        bool created = PuzzleSolver.TryCreateSnapshot(
+            mapData,
+            playerPosition,
+            remainingMoves,
+            consumedMoveTiles,
+            currentObstacles,
+            out puzzleSnapshot,
+            out errorMessage);
+
+        if (!created)
+            Debug.LogWarning($"[MapGenerator] Could not create hint snapshot: {errorMessage}");
+
+        return created;
+    }
+
+    public void PlayHintRoute(IReadOnlyList<PuzzleRouteStep> route)
+    {
+        StopHintRoute();
+        if (route == null || route.Count == 0)
+            return;
+
+        hintRouteCoroutine = StartCoroutine(PlayHintRouteCoroutine(route));
+    }
+
+    public void StopHintRoute()
+    {
+        if (hintRouteCoroutine != null)
+        {
+            StopCoroutine(hintRouteCoroutine);
+            hintRouteCoroutine = null;
+        }
+
+        for (int effectIndex = 0; effectIndex < activeHintEffects.Count; effectIndex++)
+        {
+            GameObject hintEffect = activeHintEffects[effectIndex];
+            if (hintEffect != null)
+                DestroyTileObject(hintEffect);
+        }
+
+        activeHintEffects.Clear();
+    }
+
+    private IEnumerator PlayHintRouteCoroutine(IReadOnlyList<PuzzleRouteStep> route)
+    {
+        WaitForSecondsRealtime stepWait = new WaitForSecondsRealtime(Mathf.Max(0.05f, hintStepInterval));
+
+        for (int stepIndex = 0; stepIndex < route.Count; stepIndex++)
+        {
+            Vector2Int highlightPosition = route[stepIndex].HighlightPosition;
+            BaseTile tile = GetTile(highlightPosition.x, highlightPosition.y);
+            if (tile == null)
+                continue;
+
+            PlayHintEffect(tile.transform.position);
+            yield return stepWait;
+        }
+
+        hintRouteCoroutine = null;
+    }
+
+    private void PlayHintEffect(Vector3 worldPosition)
+    {
+        if (hintEffectPrefab == null)
+            return;
+
+        GameObject hintEffect = Instantiate(hintEffectPrefab, worldPosition, Quaternion.identity);
+        hintEffect.transform.localScale = Vector3.one * Mathf.Max(0.01f, hintEffectScale);
+
+        ParticleSystemRenderer[] particleRenderers = hintEffect.GetComponentsInChildren<ParticleSystemRenderer>(true);
+        for (int rendererIndex = 0; rendererIndex < particleRenderers.Length; rendererIndex++)
+            particleRenderers[rendererIndex].sortingOrder = hintEffectSortingOrder;
+
+        activeHintEffects.Add(hintEffect);
     }
 
     private void PlayObstacleBreakEffect(BaseTile obstacleTile)
@@ -260,10 +478,38 @@ public class MapGenerator : MonoBehaviour
 
         Vector3 spawnPos = GridToWorld(gridX, gridY);
         GameObject playerGO = Instantiate(playerPrefab, spawnPos, Quaternion.identity, transform);
+        generatedPlayerTransform = playerGO.transform;
 
         PlayerController controller = playerGO.GetComponent<PlayerController>();
         if (controller == null) return;
 
         GameManager.Instance.RegisterPlayer(controller, new Vector2Int(gridX, gridY));
+    }
+
+    private List<Transform> GetTileTransformsInRevealOrder()
+    {
+        List<Transform> tileTransforms = new List<Transform>();
+
+        for (int y = 0; y < mapData.height; y++)
+        {
+            for (int x = 0; x < mapData.width; x++)
+            {
+                BaseTile tile = grid[x, y];
+                if (tile != null)
+                    tileTransforms.Add(tile.transform);
+            }
+        }
+
+        return tileTransforms;
+    }
+
+    private void HideRevealTarget(Transform target)
+    {
+        if (target == null)
+            return;
+
+        target.DOKill();
+        initialRevealScales[target] = target.localScale;
+        target.localScale = Vector3.zero;
     }
 }

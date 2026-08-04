@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapData
   width: 5
   height: 4
-  startMoveCount: 5
+  startMoveCount: 9
   rows:
   - values:
     - type: 2

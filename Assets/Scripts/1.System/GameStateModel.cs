@@ -35,12 +35,6 @@ public class GameStateModel : MonoBehaviour
         SetMoveCount(MoveCount + delta);
     }
 
-    public void ContinueWithBonusMoves(int bonusMoveCount)
-    {
-        SetMoveCount(MoveCount + bonusMoveCount);
-        SetState(GameState.Playing);
-    }
-
     public void Clear()
     {
         SetState(GameState.Cleared);

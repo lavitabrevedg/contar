@@ -5,8 +5,11 @@ using UnityEditor;
 [CustomEditor(typeof(MapData))]
 public class MapEditor : Editor
 {
+    private const string DefaultStageFolder = "Assets/Data/Stages";
+
     private int selectedX = -1;
     private int selectedY = -1;
+    private MapData sourceMap;
 
     public override void OnInspectorGUI()
     {
@@ -36,12 +39,95 @@ public class MapEditor : Editor
         }
 
         EditorGUILayout.Space();
+        DrawMapTools(map);
+        EditorGUILayout.Space();
 
         if (map.rows != null && map.rows.Length == map.height && map.width > 0 && map.height > 0)
         {
             DrawGrid(map);
             DrawSelectedTileInfo(map);
         }
+        else
+        {
+            EditorGUILayout.HelpBox("Grid size and row data do not match. Use Apply Grid Size or load another MapData.", MessageType.Warning);
+        }
+    }
+
+    private void DrawMapTools(MapData map)
+    {
+        DrawValidation(map);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Load / Save", EditorStyles.boldLabel);
+        sourceMap = (MapData)EditorGUILayout.ObjectField("Load From MapData", sourceMap, typeof(MapData), false);
+
+        EditorGUI.BeginDisabledGroup(sourceMap == null || sourceMap == map);
+        if (GUILayout.Button("Load From Selected MapData"))
+            LoadFromMap(map, sourceMap);
+        EditorGUI.EndDisabledGroup();
+
+        if (GUILayout.Button("Save Current MapData Copy"))
+            SaveCopy(map);
+    }
+
+    private void DrawValidation(MapData map)
+    {
+        if (TryValidateMap(map, out string validationMessage))
+        {
+            EditorGUILayout.HelpBox(validationMessage, MessageType.Info);
+            return;
+        }
+
+        EditorGUILayout.HelpBox(validationMessage, MessageType.Warning);
+    }
+
+    private void LoadFromMap(MapData targetMap, MapData sourceMapData)
+    {
+        if (targetMap == null || sourceMapData == null)
+            return;
+
+        Undo.RecordObject(targetMap, "Load MapData");
+        CopyMapData(sourceMapData, targetMap);
+        selectedX = -1;
+        selectedY = -1;
+        EditorUtility.SetDirty(targetMap);
+        AssetDatabase.SaveAssetIfDirty(targetMap);
+    }
+
+    private void SaveCopy(MapData map)
+    {
+        if (map == null)
+            return;
+
+        if (!TryValidateMap(map, out string validationMessage))
+        {
+            bool shouldContinue = EditorUtility.DisplayDialog(
+                "MapData Validation",
+                $"{validationMessage}\n\nSave a copy anyway?",
+                "Save",
+                "Cancel");
+
+            if (!shouldContinue)
+                return;
+        }
+
+        string defaultFileName = $"{map.name}_Copy";
+        string selectedPath = EditorUtility.SaveFilePanelInProject(
+            "Save MapData Copy",
+            defaultFileName,
+            "asset",
+            "Choose where to save the copied MapData.",
+            DefaultStageFolder);
+
+        if (string.IsNullOrWhiteSpace(selectedPath))
+            return;
+
+        MapData mapCopy = CreateInstance<MapData>();
+        CopyMapData(map, mapCopy);
+        AssetDatabase.CreateAsset(mapCopy, selectedPath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Selection.activeObject = mapCopy;
     }
 
     private void DrawGrid(MapData map)
@@ -155,6 +241,88 @@ public class MapEditor : Editor
             case TileType.NumberObstacle: return Color.red;
             case TileType.Wall:           return Color.gray;
             default:                      return Color.white;
+        }
+    }
+
+    private bool TryValidateMap(MapData map, out string validationMessage)
+    {
+        if (map == null)
+        {
+            validationMessage = "MapData is missing.";
+            return false;
+        }
+
+        if (map.width <= 0 || map.height <= 0)
+        {
+            validationMessage = "Width and Height must be greater than 0.";
+            return false;
+        }
+
+        if (map.rows == null || map.rows.Length != map.height)
+        {
+            validationMessage = "Row count does not match Height.";
+            return false;
+        }
+
+        int startCount = 0;
+        int exitCount = 0;
+
+        for (int y = 0; y < map.height; y++)
+        {
+            if (map.rows[y] == null || map.rows[y].values == null || map.rows[y].values.Length != map.width)
+            {
+                validationMessage = $"Row {y} tile count does not match Width.";
+                return false;
+            }
+
+            for (int x = 0; x < map.width; x++)
+            {
+                SerializedTile tile = map.rows[y].values[x];
+                if (tile.type == TileType.Start)
+                    startCount++;
+
+                if (tile.type == TileType.Exit)
+                    exitCount++;
+            }
+        }
+
+        if (startCount <= 0)
+        {
+            validationMessage = "Start tile is missing.";
+            return false;
+        }
+
+        if (exitCount <= 0)
+        {
+            validationMessage = "Exit tile is missing.";
+            return false;
+        }
+
+        validationMessage = $"Map is valid. Start={startCount}, Exit={exitCount}";
+        return true;
+    }
+
+    private void CopyMapData(MapData sourceMapData, MapData targetMap)
+    {
+        targetMap.width = sourceMapData.width;
+        targetMap.height = sourceMapData.height;
+        targetMap.startMoveCount = sourceMapData.startMoveCount;
+
+        targetMap.rows = new Wrapper<SerializedTile>[targetMap.height];
+        for (int y = 0; y < targetMap.height; y++)
+        {
+            targetMap.rows[y] = new Wrapper<SerializedTile>();
+            targetMap.rows[y].values = new SerializedTile[targetMap.width];
+
+            if (sourceMapData.rows == null ||
+                y >= sourceMapData.rows.Length ||
+                sourceMapData.rows[y] == null ||
+                sourceMapData.rows[y].values == null)
+                continue;
+
+            int copyWidth = Mathf.Min(targetMap.width, sourceMapData.rows[y].values.Length);
+            for (int x = 0; x < copyWidth; x++)
+                targetMap.rows[y].values[x] = sourceMapData.rows[y].values[x];
         }
     }
 }

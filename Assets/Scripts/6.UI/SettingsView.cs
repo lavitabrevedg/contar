@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class SettingsView : MonoBehaviour
@@ -9,31 +10,54 @@ public class SettingsView : MonoBehaviour
     [SerializeField] private CanvasGroup panel;
     [SerializeField] private Button openButton;
     [SerializeField] private Button closeButton;
-    [SerializeField] private Button soundButton;
-    [SerializeField] private Image soundButtonImage;
-    [SerializeField] private Sprite soundOnSprite;
-    [SerializeField] private Sprite soundOffSprite;
-    [SerializeField] private TMP_Text soundButtonText;
+    [FormerlySerializedAs("soundButton")]
+    [SerializeField] private Button soundEffectButton;
+    [FormerlySerializedAs("soundButtonImage")]
+    [SerializeField] private Image soundEffectButtonImage;
+    [FormerlySerializedAs("soundOnSprite")]
+    [FormerlySerializedAs("soundEffectOnSprite")]
+    [SerializeField] private Sprite onSprite;
+    [FormerlySerializedAs("soundOffSprite")]
+    [FormerlySerializedAs("soundEffectOffSprite")]
+    [SerializeField] private Sprite offSprite;
+    [FormerlySerializedAs("soundButtonText")]
+    [SerializeField] private TMP_Text soundEffectButtonText;
+    [SerializeField] private Button musicButton;
+    [SerializeField] private Image musicButtonImage;
+    [SerializeField] private TMP_Text musicButtonText;
+    [SerializeField] private Button vibrationButton;
+    [SerializeField] private Image vibrationButtonImage;
+    [SerializeField] private TMP_Text vibrationButtonText;
     [SerializeField] private bool hidePanelOnAwake = true;
     [SerializeField] private float panelTweenDuration = 0.18f;
-    [SerializeField] private float soundItemTweenDuration = 0.16f;
-    [SerializeField] private float soundImageTweenDelay = 0.04f;
-    [SerializeField] private float soundTextTweenDelay = 0.08f;
+    [FormerlySerializedAs("soundItemTweenDuration")]
+    [SerializeField] private float settingItemTweenDuration = 0.16f;
+    [FormerlySerializedAs("soundImageTweenDelay")]
+    [SerializeField] private float firstImageTweenDelay = 0.04f;
+    [FormerlySerializedAs("soundTextTweenDelay")]
+    [SerializeField] private float firstTextTweenDelay = 0.08f;
+    [SerializeField] private float settingRowTweenInterval = 0.06f;
 
     public event Action OpenClicked;
     public event Action CloseClicked;
-    public event Action SoundClicked;
+    public event Action SoundEffectClicked;
+    public event Action MusicClicked;
+    public event Action VibrationClicked;
 
-    private Vector3 soundButtonImageBaseScale = Vector3.one;
-    private Vector3 soundButtonTextBaseScale = Vector3.one;
-    private float soundButtonImageBaseAlpha = 1f;
-    private float soundButtonTextBaseAlpha = 1f;
-    private bool hasSoundAnimationDefaults;
+    private Image[] settingButtonImages;
+    private TMP_Text[] settingButtonTexts;
+    private Vector3[] settingButtonImageBaseScales;
+    private Vector3[] settingButtonTextBaseScales;
+    private float[] settingButtonImageBaseAlphas;
+    private float[] settingButtonTextBaseAlphas;
+    private bool hasSettingAnimationDefaults;
 
     private void Awake()
     {
-        ResolveSoundButtonImage();
-        CacheSoundAnimationDefaults();
+        ResolveSoundEffectButtonImage();
+        ResolveMusicButtonImage();
+        ResolveVibrationButtonImage();
+        CacheSettingAnimationDefaults();
 
         if (hidePanelOnAwake)
             SetPanelVisible(false);
@@ -47,8 +71,14 @@ public class SettingsView : MonoBehaviour
         if (closeButton != null)
             closeButton.onClick.AddListener(NotifyCloseClicked);
 
-        if (soundButton != null)
-            soundButton.onClick.AddListener(NotifySoundClicked);
+        if (soundEffectButton != null)
+            soundEffectButton.onClick.AddListener(NotifySoundEffectClicked);
+
+        if (musicButton != null)
+            musicButton.onClick.AddListener(NotifyMusicClicked);
+
+        if (vibrationButton != null)
+            vibrationButton.onClick.AddListener(NotifyVibrationClicked);
     }
 
     private void OnDisable()
@@ -59,8 +89,14 @@ public class SettingsView : MonoBehaviour
         if (closeButton != null)
             closeButton.onClick.RemoveListener(NotifyCloseClicked);
 
-        if (soundButton != null)
-            soundButton.onClick.RemoveListener(NotifySoundClicked);
+        if (soundEffectButton != null)
+            soundEffectButton.onClick.RemoveListener(NotifySoundEffectClicked);
+
+        if (musicButton != null)
+            musicButton.onClick.RemoveListener(NotifyMusicClicked);
+
+        if (vibrationButton != null)
+            vibrationButton.onClick.RemoveListener(NotifyVibrationClicked);
 
         KillPanelTweens();
     }
@@ -81,17 +117,17 @@ public class SettingsView : MonoBehaviour
             panel.interactable = false;
             panel.blocksRaycasts = true;
 
-            PrepareSoundControlsForShow();
+            PrepareSettingControlsForShow();
             panel.DOFade(1f, panelTweenDuration);
             panel.transform.DOScale(Vector3.one, panelTweenDuration)
                 .SetEase(Ease.OutBack)
                 .OnComplete(() => panel.interactable = true);
-            AnimateSoundControls();
+            AnimateSettingControls();
             return;
         }
 
-        KillSoundControlTweens();
-        RestoreSoundControlVisuals();
+        KillSettingControlTweens();
+        RestoreSettingControlVisuals();
         panel.interactable = false;
         panel.blocksRaycasts = false;
 
@@ -101,27 +137,64 @@ public class SettingsView : MonoBehaviour
             .OnComplete(() => panel.gameObject.SetActive(false));
     }
 
-    public void SetSoundEnabled(bool isEnabled)
+    public void SetSoundEffectEnabled(bool isEnabled)
     {
-        ResolveSoundButtonImage();
+        ResolveSoundEffectButtonImage();
 
-        if (soundButtonImage != null)
+        if (soundEffectButtonImage != null)
         {
-            Sprite soundSprite = isEnabled ? soundOnSprite : soundOffSprite;
+            Sprite soundSprite = isEnabled ? onSprite : offSprite;
             if (soundSprite != null)
-                soundButtonImage.sprite = soundSprite;
+                soundEffectButtonImage.sprite = soundSprite;
         }
-
-        if (soundButtonText != null)
-            soundButtonText.text = "Sound";
     }
 
-    private void ResolveSoundButtonImage()
+    public void SetMusicEnabled(bool isEnabled)
     {
-        if (soundButtonImage != null || soundButton == null)
+        ResolveMusicButtonImage();
+
+        if (musicButtonImage == null)
             return;
 
-        soundButtonImage = soundButton.targetGraphic as Image;
+        Sprite musicSprite = isEnabled ? onSprite : offSprite;
+        if (musicSprite != null)
+            musicButtonImage.sprite = musicSprite;
+    }
+
+    public void SetVibrationEnabled(bool isEnabled)
+    {
+        ResolveVibrationButtonImage();
+
+        if (vibrationButtonImage == null)
+            return;
+
+        Sprite vibrationSprite = isEnabled ? onSprite : offSprite;
+        if (vibrationSprite != null)
+            vibrationButtonImage.sprite = vibrationSprite;
+    }
+
+    private void ResolveSoundEffectButtonImage()
+    {
+        if (soundEffectButtonImage != null || soundEffectButton == null)
+            return;
+
+        soundEffectButtonImage = soundEffectButton.targetGraphic as Image;
+    }
+
+    private void ResolveMusicButtonImage()
+    {
+        if (musicButtonImage != null || musicButton == null)
+            return;
+
+        musicButtonImage = musicButton.targetGraphic as Image;
+    }
+
+    private void ResolveVibrationButtonImage()
+    {
+        if (vibrationButtonImage != null || vibrationButton == null)
+            return;
+
+        vibrationButtonImage = vibrationButton.targetGraphic as Image;
     }
 
     private void KillPanelTweens()
@@ -131,107 +204,169 @@ public class SettingsView : MonoBehaviour
 
         panel.DOKill();
         panel.transform.DOKill();
-        KillSoundControlTweens();
+        KillSettingControlTweens();
     }
 
-    private void CacheSoundAnimationDefaults()
+    private void BuildSettingAnimationTargets()
     {
-        if (hasSoundAnimationDefaults)
+        settingButtonImages = new Image[]
+        {
+            musicButtonImage,
+            vibrationButtonImage,
+            soundEffectButtonImage
+        };
+        settingButtonTexts = new TMP_Text[]
+        {
+            musicButtonText,
+            vibrationButtonText,
+            soundEffectButtonText
+        };
+        settingButtonImageBaseScales = new Vector3[settingButtonImages.Length];
+        settingButtonTextBaseScales = new Vector3[settingButtonTexts.Length];
+        settingButtonImageBaseAlphas = new float[settingButtonImages.Length];
+        settingButtonTextBaseAlphas = new float[settingButtonTexts.Length];
+    }
+
+    private void CacheSettingAnimationDefaults()
+    {
+        if (hasSettingAnimationDefaults)
             return;
 
-        ResolveSoundButtonImage();
+        ResolveSoundEffectButtonImage();
+        ResolveMusicButtonImage();
+        ResolveVibrationButtonImage();
+        BuildSettingAnimationTargets();
 
-        if (soundButtonImage != null)
+        for (int index = 0; index < settingButtonImages.Length; index++)
         {
-            soundButtonImageBaseScale = soundButtonImage.transform.localScale;
-            soundButtonImageBaseAlpha = soundButtonImage.color.a;
+            Image buttonImage = settingButtonImages[index];
+            TMP_Text buttonText = settingButtonTexts[index];
+
+            if (buttonImage != null)
+            {
+                settingButtonImageBaseScales[index] = buttonImage.transform.localScale;
+                settingButtonImageBaseAlphas[index] = buttonImage.color.a;
+            }
+
+            if (buttonText != null)
+            {
+                settingButtonTextBaseScales[index] = buttonText.transform.localScale;
+                settingButtonTextBaseAlphas[index] = buttonText.color.a;
+            }
         }
 
-        if (soundButtonText != null)
-        {
-            soundButtonTextBaseScale = soundButtonText.transform.localScale;
-            soundButtonTextBaseAlpha = soundButtonText.color.a;
-        }
-
-        hasSoundAnimationDefaults = true;
+        hasSettingAnimationDefaults = true;
     }
 
-    private void PrepareSoundControlsForShow()
+    private void PrepareSettingControlsForShow()
     {
-        CacheSoundAnimationDefaults();
-        KillSoundControlTweens();
+        CacheSettingAnimationDefaults();
+        KillSettingControlTweens();
 
-        if (soundButtonImage != null)
+        for (int index = 0; index < settingButtonImages.Length; index++)
         {
-            Color imageColor = soundButtonImage.color;
-            imageColor.a = 0f;
-            soundButtonImage.color = imageColor;
-            soundButtonImage.transform.localScale = soundButtonImageBaseScale * 0.9f;
-        }
+            Image buttonImage = settingButtonImages[index];
+            TMP_Text buttonText = settingButtonTexts[index];
 
-        if (soundButtonText != null)
-        {
-            Color textColor = soundButtonText.color;
-            textColor.a = 0f;
-            soundButtonText.color = textColor;
-            soundButtonText.transform.localScale = soundButtonTextBaseScale * 0.9f;
-        }
-    }
+            if (buttonImage != null)
+            {
+                Color imageColor = buttonImage.color;
+                imageColor.a = 0f;
+                buttonImage.color = imageColor;
+                buttonImage.transform.localScale = settingButtonImageBaseScales[index] * 0.9f;
+            }
 
-    private void AnimateSoundControls()
-    {
-        if (soundButtonImage != null)
-        {
-            soundButtonImage.DOFade(soundButtonImageBaseAlpha, soundItemTweenDuration)
-                .SetDelay(soundImageTweenDelay);
-            soundButtonImage.transform.DOScale(soundButtonImageBaseScale, soundItemTweenDuration)
-                .SetDelay(soundImageTweenDelay)
-                .SetEase(Ease.OutBack);
-        }
-
-        if (soundButtonText != null)
-        {
-            soundButtonText.DOFade(soundButtonTextBaseAlpha, soundItemTweenDuration)
-                .SetDelay(soundTextTweenDelay);
-            soundButtonText.transform.DOScale(soundButtonTextBaseScale, soundItemTweenDuration)
-                .SetDelay(soundTextTweenDelay)
-                .SetEase(Ease.OutBack);
+            if (buttonText != null)
+            {
+                Color textColor = buttonText.color;
+                textColor.a = 0f;
+                buttonText.color = textColor;
+                buttonText.transform.localScale = settingButtonTextBaseScales[index] * 0.9f;
+            }
         }
     }
 
-    private void RestoreSoundControlVisuals()
+    private void AnimateSettingControls()
     {
-        CacheSoundAnimationDefaults();
-
-        if (soundButtonImage != null)
+        for (int index = 0; index < settingButtonImages.Length; index++)
         {
-            Color imageColor = soundButtonImage.color;
-            imageColor.a = soundButtonImageBaseAlpha;
-            soundButtonImage.color = imageColor;
-            soundButtonImage.transform.localScale = soundButtonImageBaseScale;
-        }
+            Image buttonImage = settingButtonImages[index];
+            TMP_Text buttonText = settingButtonTexts[index];
+            float imageDelay = firstImageTweenDelay + settingRowTweenInterval * index;
+            float textDelay = firstTextTweenDelay + settingRowTweenInterval * index;
 
-        if (soundButtonText != null)
-        {
-            Color textColor = soundButtonText.color;
-            textColor.a = soundButtonTextBaseAlpha;
-            soundButtonText.color = textColor;
-            soundButtonText.transform.localScale = soundButtonTextBaseScale;
+            if (buttonImage != null)
+            {
+                buttonImage.DOFade(settingButtonImageBaseAlphas[index], settingItemTweenDuration)
+                    .SetDelay(imageDelay)
+                    .SetUpdate(true);
+                buttonImage.transform.DOScale(settingButtonImageBaseScales[index], settingItemTweenDuration)
+                    .SetDelay(imageDelay)
+                    .SetEase(Ease.OutBack)
+                    .SetUpdate(true);
+            }
+
+            if (buttonText != null)
+            {
+                buttonText.DOFade(settingButtonTextBaseAlphas[index], settingItemTweenDuration)
+                    .SetDelay(textDelay)
+                    .SetUpdate(true);
+                buttonText.transform.DOScale(settingButtonTextBaseScales[index], settingItemTweenDuration)
+                    .SetDelay(textDelay)
+                    .SetEase(Ease.OutBack)
+                    .SetUpdate(true);
+            }
         }
     }
 
-    private void KillSoundControlTweens()
+    private void RestoreSettingControlVisuals()
     {
-        if (soundButtonImage != null)
-        {
-            soundButtonImage.DOKill();
-            soundButtonImage.transform.DOKill();
-        }
+        CacheSettingAnimationDefaults();
 
-        if (soundButtonText != null)
+        for (int index = 0; index < settingButtonImages.Length; index++)
         {
-            soundButtonText.DOKill();
-            soundButtonText.transform.DOKill();
+            Image buttonImage = settingButtonImages[index];
+            TMP_Text buttonText = settingButtonTexts[index];
+
+            if (buttonImage != null)
+            {
+                Color imageColor = buttonImage.color;
+                imageColor.a = settingButtonImageBaseAlphas[index];
+                buttonImage.color = imageColor;
+                buttonImage.transform.localScale = settingButtonImageBaseScales[index];
+            }
+
+            if (buttonText != null)
+            {
+                Color textColor = buttonText.color;
+                textColor.a = settingButtonTextBaseAlphas[index];
+                buttonText.color = textColor;
+                buttonText.transform.localScale = settingButtonTextBaseScales[index];
+            }
+        }
+    }
+
+    private void KillSettingControlTweens()
+    {
+        if (settingButtonImages == null || settingButtonTexts == null)
+            return;
+
+        for (int index = 0; index < settingButtonImages.Length; index++)
+        {
+            Image buttonImage = settingButtonImages[index];
+            TMP_Text buttonText = settingButtonTexts[index];
+
+            if (buttonImage != null)
+            {
+                buttonImage.DOKill();
+                buttonImage.transform.DOKill();
+            }
+
+            if (buttonText != null)
+            {
+                buttonText.DOKill();
+                buttonText.transform.DOKill();
+            }
         }
     }
 
@@ -245,8 +380,18 @@ public class SettingsView : MonoBehaviour
         CloseClicked?.Invoke();
     }
 
-    private void NotifySoundClicked()
+    private void NotifySoundEffectClicked()
     {
-        SoundClicked?.Invoke();
+        SoundEffectClicked?.Invoke();
+    }
+
+    private void NotifyMusicClicked()
+    {
+        MusicClicked?.Invoke();
+    }
+
+    private void NotifyVibrationClicked()
+    {
+        VibrationClicked?.Invoke();
     }
 }

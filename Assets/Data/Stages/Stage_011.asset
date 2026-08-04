@@ -40,13 +40,13 @@ MonoBehaviour:
       value: 0
       exitCondition: 0
     - type: 3
-      value: -1
+      value: -3
       exitCondition: 0
     - type: 0
       value: 0
       exitCondition: 0
     - type: 3
-      value: -3
+      value: -1
       exitCondition: 0
   - values:
     - type: 0

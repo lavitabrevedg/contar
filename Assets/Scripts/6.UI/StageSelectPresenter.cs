@@ -12,6 +12,7 @@ public class StageSelectPresenter : MonoBehaviour
     [SerializeField] private AudioService audioService;
 
     private int pageStartStageIndex;
+    private bool isTransitioning;
 
     private void Awake()
     {
@@ -183,14 +184,32 @@ public class StageSelectPresenter : MonoBehaviour
     {
         ResolveReferences();
 
-        if (!IsStageAvailable(stageIndex))
+        if (isTransitioning || !IsStageAvailable(stageIndex))
             return;
 
         if (progressService != null)
             progressService.SelectStageForPlay(stageIndex);
 
         PlayUiSound();
-        SceneManager.LoadScene(InGameSceneName);
+        isTransitioning = true;
+
+        if (view == null)
+        {
+            LoadInGameScene();
+            return;
+        }
+
+        view.PlayGameStartTransition(LoadInGameScene);
+    }
+
+    private void LoadInGameScene()
+    {
+        AsyncOperation loadOperation = SceneManager.LoadSceneAsync(InGameSceneName);
+        if (loadOperation != null)
+            return;
+
+        isTransitioning = false;
+        Debug.LogError($"[StageSelectPresenter] Failed to load scene: {InGameSceneName}");
     }
 
     private int ClampPageStartStageIndex(int stageIndex, int stageCount)

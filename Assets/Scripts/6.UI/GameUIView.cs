@@ -2,259 +2,248 @@ using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 public class GameUIView : MonoBehaviour
 {
     private const float PrimaryButtonY = -159.3f;
     private const float SecondaryButtonY = -353.3f;
-    private const float FailSecondaryButtonY = -333.3f;
-    private const float FailTertiaryButtonY = -507.3f;
+    private const string UiStringTableName = "UI";
+    private const string ExitConditionOddKey = "Text.ExitCondition_Odd";
+    private const string ExitConditionEvenKey = "Text.ExitCondition_Even";
+    private const string MovesLeftKey = "Text.MovesLeft";
+    private const string ClearStageKey = "Text.ClearStage";
+    private const string FailureStageKey = "Text.FailStage";
+    private const string KoreanLocaleCode = "ko";
 
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private TMP_Text stageText;
     [SerializeField] private TMP_Text exitConditionText;
-    [SerializeField] private TMP_Text skipTicketText;
     [SerializeField] private CanvasGroup clearPanel;
-    [SerializeField] private Button retryButton;
-    [SerializeField] private Button nextButton;
-    [SerializeField] private Button skipButton;
-    [SerializeField] private TMP_Text retryButtonText;
-    [SerializeField] private TMP_Text nextButtonText;
-    [SerializeField] private TMP_Text skipButtonText;
+    [SerializeField] private Button primaryActionButton;
+    [SerializeField] private TMP_Text primaryActionButtonText;
     [SerializeField] private TMP_Text clearStageText;
     [SerializeField] private TMP_Text clearMoveText;
-    [SerializeField] private TMP_Text rewardText;
     [SerializeField] private Button lobbyButton;
+    [SerializeField] private Button hintButton;
+    [SerializeField] private GameObject hintDialog;
+    [SerializeField] private TMP_Text hintDialogTitle;
+    [SerializeField] private Button hintConfirmButton;
+    [SerializeField] private Button hintCancelButton;
+    [SerializeField] private TMP_Text hintCancelButtonText;
+    [SerializeField] private GameObject resultInputBlocker;
     [SerializeField] private float panelTweenDuration = 0.18f;
     [SerializeField] private Ease panelEase = Ease.OutBack;
+    [SerializeField] private float koreanClearStageFontSize = 110f;
+    [SerializeField] private TMP_FontAsset koreanClearStageFont;
 
-    private string retryButtonDefaultLabel;
-    private string nextButtonDefaultLabel;
     private string lobbyButtonDefaultLabel;
     private TMP_Text lobbyButtonText;
-    private bool isShowingFailResult;
-    private bool retryButtonShouldBeVisible = true;
-    private bool retryButtonShouldInteract = true;
-    private string retryButtonLabel = "Watch Ad +2";
-    private bool skipButtonShouldBeVisible = true;
-    private bool skipButtonShouldInteract;
-    private string skipButtonLabel = "No Skip Tickets";
-    private GameObject resultInputBlocker;
+    private float clearStageDefaultFontSize;
+    private TMP_FontAsset clearStageDefaultFont;
+    private bool isNextStageAvailable;
+    private bool isShowingClearResult;
+    private readonly LocalizedString exitConditionLocalizedString = new LocalizedString(UiStringTableName, ExitConditionOddKey);
+    private readonly LocalizedString clearStageLocalizedString = new LocalizedString(UiStringTableName, ClearStageKey);
+    private readonly LocalizedString failureStageLocalizedString = new LocalizedString(UiStringTableName, FailureStageKey);
+    private readonly LocalizedString movesLeftLocalizedString = new LocalizedString(UiStringTableName, MovesLeftKey);
 
-    public event Action RetryClicked;
+    public event Action RestartClicked;
     public event Action NextClicked;
-    public event Action SkipClicked;
     public event Action LobbyClicked;
+    public event Action HintClicked;
+    public event Action HintConfirmed;
+    public event Action HintCanceled;
 
     private void Awake()
     {
+        DisablePrimaryActionLocalizer();
         CacheButtonLabels();
+        CacheClearStageDefaults();
+        exitConditionLocalizedString.StringChanged += UpdateExitConditionText;
+        clearStageLocalizedString.StringChanged += UpdateClearStageText;
+        failureStageLocalizedString.StringChanged += UpdateFailureStageText;
+        movesLeftLocalizedString.StringChanged += UpdateMovesLeftText;
+    }
+
+    private void OnDestroy()
+    {
+        exitConditionLocalizedString.StringChanged -= UpdateExitConditionText;
+        clearStageLocalizedString.StringChanged -= UpdateClearStageText;
+        failureStageLocalizedString.StringChanged -= UpdateFailureStageText;
+        movesLeftLocalizedString.StringChanged -= UpdateMovesLeftText;
     }
 
     private void OnEnable()
     {
         CacheButtonLabels();
 
-        if (retryButton != null)
-            retryButton.onClick.AddListener(NotifyRetryClicked);
-
-        if (nextButton != null)
-            nextButton.onClick.AddListener(NotifyNextClicked);
-
-        if (skipButton != null)
-            skipButton.onClick.AddListener(NotifySkipClicked);
+        if (primaryActionButton != null)
+            primaryActionButton.onClick.AddListener(NotifyPrimaryActionClicked);
 
         if (lobbyButton != null)
             lobbyButton.onClick.AddListener(NotifyLobbyClicked);
+
+        if (hintButton != null)
+            hintButton.onClick.AddListener(NotifyHintClicked);
+
+        if (hintConfirmButton != null)
+            hintConfirmButton.onClick.AddListener(NotifyHintConfirmed);
+
+        if (hintCancelButton != null)
+            hintCancelButton.onClick.AddListener(NotifyHintCanceled);
     }
 
     private void OnDisable()
     {
-        if (retryButton != null)
-            retryButton.onClick.RemoveListener(NotifyRetryClicked);
-
-        if (nextButton != null)
-            nextButton.onClick.RemoveListener(NotifyNextClicked);
-
-        if (skipButton != null)
-            skipButton.onClick.RemoveListener(NotifySkipClicked);
+        if (primaryActionButton != null)
+            primaryActionButton.onClick.RemoveListener(NotifyPrimaryActionClicked);
 
         if (lobbyButton != null)
             lobbyButton.onClick.RemoveListener(NotifyLobbyClicked);
 
+        if (hintButton != null)
+            hintButton.onClick.RemoveListener(NotifyHintClicked);
+
+        if (hintConfirmButton != null)
+            hintConfirmButton.onClick.RemoveListener(NotifyHintConfirmed);
+
+        if (hintCancelButton != null)
+            hintCancelButton.onClick.RemoveListener(NotifyHintCanceled);
+
+        HideHintDialog();
         KillResultPanelTweens();
     }
 
     public void SetMoveCount(int moveCount)
     {
-        if (moveCountText == null) return;
+        if (moveCountText == null)
+            return;
 
-        moveCountText.text = moveCount.ToString();
+        moveCountText.text = Mathf.Max(0, moveCount).ToString();
     }
 
     public void SetStageInfo(int stageNumber, int stageCount)
     {
-        if (stageText == null) return;
-
-        if (stageCount <= 0)
-        {
-            stageText.text = "Stage -";
+        if (stageText == null)
             return;
-        }
 
-        stageText.text = $"Stage {stageNumber}/{stageCount}";
+        stageText.text = stageCount <= 0 ? "Stage -" : $"Stage {stageNumber}/{stageCount}";
     }
 
     public void SetExitCondition(ExitCondition exitCondition)
     {
-        if (exitConditionText == null) return;
+        if (exitConditionText == null)
+            return;
 
-        switch (exitCondition)
-        {
-            case ExitCondition.OddOnly:
-                exitConditionText.text = "Exit: Odd Moves";
-                break;
-            case ExitCondition.EvenOnly:
-                exitConditionText.text = "Exit: Even Moves";
-                break;
-            default:
-                exitConditionText.text = "Exit: Any";
-                break;
-        }
-    }
+        bool hasExitCondition = exitCondition != ExitCondition.Free;
+        exitConditionText.gameObject.SetActive(hasExitCondition);
+        if (!hasExitCondition)
+            return;
 
-    public void SetSkipTicketCount(int skipTicketCount, int maxSkipTicketCount)
-    {
-        if (skipTicketText == null) return;
-
-        skipTicketText.text = $"Skip Ticket {skipTicketCount}/{maxSkipTicketCount}";
+        exitConditionLocalizedString.SetReference(UiStringTableName, GetExitConditionKey(exitCondition));
+        exitConditionLocalizedString.RefreshString();
     }
 
     public void SetNextStageAvailable(bool isAvailable)
     {
-        CacheButtonLabels();
+        isNextStageAvailable = isAvailable;
 
-        if (nextButton != null)
-            nextButton.interactable = isAvailable;
-
-        if (nextButtonText != null)
-            nextButtonText.text = isAvailable ? nextButtonDefaultLabel : "Last";
+        if (isShowingClearResult)
+            ConfigureClearPrimaryAction();
     }
 
-    public void SetRetryButtonLabel(string label)
+    public void SetClearResult(int stageNumber, int remainingMoveCount)
     {
-        SetRetryButtonState(true, true, label);
+        clearStageLocalizedString.Arguments = new object[] { stageNumber };
+        clearStageLocalizedString.RefreshString();
+
+        movesLeftLocalizedString.Arguments = new object[] { Mathf.Max(0, remainingMoveCount) };
+        movesLeftLocalizedString.RefreshString();
     }
 
-    public void SetRetryButtonState(bool isVisible, bool isInteractable, string label)
+    public void SetHintButtonState(bool isVisible, bool isInteractable)
     {
-        retryButtonShouldBeVisible = isVisible;
-        retryButtonShouldInteract = isInteractable;
-        retryButtonLabel = label;
+        if (hintButton == null)
+            return;
 
-        ApplyRetryButtonState();
+        hintButton.gameObject.SetActive(isVisible);
+        hintButton.interactable = isVisible && isInteractable;
     }
 
-    public void SetSkipButtonState(bool isVisible, bool isInteractable, string label)
+    public void ShowHintConfirmation()
     {
-        skipButtonShouldBeVisible = isVisible;
-        skipButtonShouldInteract = isInteractable;
-        skipButtonLabel = label;
+        if (hintDialog == null)
+            return;
 
-        ApplySkipButtonState();
+        if (hintDialogTitle != null)
+            hintDialogTitle.text = "Watch Ad to Reveal Route";
+
+        if (hintConfirmButton != null)
+            hintConfirmButton.gameObject.SetActive(true);
+
+        if (hintCancelButtonText != null)
+            hintCancelButtonText.text = "Cancel";
+
+        hintDialog.SetActive(true);
+        hintDialog.transform.SetAsLastSibling();
     }
 
-    public void SetClearResult(int stageNumber, int remainingMoveCount, bool grantedSkipTicket, int skipTicketCount)
+    public void ShowHintMessage(string message)
     {
-        if (clearStageText != null)
-            clearStageText.text = $"Stage {stageNumber} Clear";
+        if (hintDialog == null)
+            return;
 
-        if (clearMoveText != null)
-            clearMoveText.text = $"Moves Left {remainingMoveCount}";
+        if (hintDialogTitle != null)
+            hintDialogTitle.text = message;
 
-        if (rewardText != null)
-        {
-            rewardText.gameObject.SetActive(grantedSkipTicket);
-            rewardText.text = grantedSkipTicket ? $"Skip Ticket +1 ({skipTicketCount})" : string.Empty;
-        }
+        if (hintConfirmButton != null)
+            hintConfirmButton.gameObject.SetActive(false);
+
+        if (hintCancelButtonText != null)
+            hintCancelButtonText.text = "OK";
+
+        hintDialog.SetActive(true);
+        hintDialog.transform.SetAsLastSibling();
     }
 
-    private void ApplySkipButtonState()
+    public void HideHintDialog()
     {
-        if (skipButton == null) return;
-
-        bool shouldShowSkipButton = skipButtonShouldBeVisible && isShowingFailResult;
-        skipButton.gameObject.SetActive(shouldShowSkipButton);
-        skipButton.interactable = skipButtonShouldInteract && shouldShowSkipButton;
-
-        if (skipButtonText != null)
-            skipButtonText.text = skipButtonLabel;
-    }
-
-    private void ApplyRetryButtonState()
-    {
-        if (retryButton == null) return;
-
-        bool shouldShowRetryButton = retryButtonShouldBeVisible && isShowingFailResult;
-        retryButton.gameObject.SetActive(shouldShowRetryButton);
-        retryButton.interactable = retryButtonShouldInteract && shouldShowRetryButton;
-
-        if (retryButtonText != null)
-            retryButtonText.text = string.IsNullOrWhiteSpace(retryButtonLabel) ? retryButtonDefaultLabel : retryButtonLabel;
+        if (hintDialog != null)
+            hintDialog.SetActive(false);
     }
 
     public void ShowClear()
     {
-        isShowingFailResult = false;
         SetClearModeObjects();
         ShowPanel(clearPanel);
         SetResultInputBlockerVisible(true);
-        ApplyRetryButtonState();
-        ApplySkipButtonState();
-    }
-
-    public void SetLobbyButtonLabel(string label)
-    {
-        CacheButtonLabels();
-
-        if (lobbyButtonText == null) return;
-
-        lobbyButtonText.text = string.IsNullOrWhiteSpace(label) ? lobbyButtonDefaultLabel : label;
     }
 
     public void ShowFail()
     {
-        isShowingFailResult = true;
         SetFailModeObjects();
         ShowPanel(clearPanel);
         SetResultInputBlockerVisible(true);
-        ApplyRetryButtonState();
-        ApplySkipButtonState();
     }
 
     public void HideResultPanels()
     {
-        isShowingFailResult = false;
         HidePanel(clearPanel);
         SetResultInputBlockerVisible(false);
-        ApplyRetryButtonState();
-        ApplySkipButtonState();
     }
 
     private void SetClearModeObjects()
     {
+        isShowingClearResult = true;
+
         if (clearMoveText != null)
             clearMoveText.gameObject.SetActive(true);
 
-        if (nextButton != null)
-        {
-            nextButton.gameObject.SetActive(true);
-            SetButtonAnchoredY(nextButton, PrimaryButtonY);
-        }
-
-        if (retryButton != null)
-            retryButton.gameObject.SetActive(false);
+        ConfigureClearPrimaryAction();
 
         if (lobbyButton != null)
         {
@@ -267,61 +256,172 @@ public class GameUIView : MonoBehaviour
 
     private void SetFailModeObjects()
     {
+        isShowingClearResult = false;
+
         if (clearStageText != null)
-            clearStageText.text = "Failed";
+        {
+            failureStageLocalizedString.RefreshString();
+        }
 
         if (clearMoveText != null)
             clearMoveText.gameObject.SetActive(false);
 
-        if (rewardText != null)
+        if (primaryActionButton != null)
         {
-            rewardText.gameObject.SetActive(false);
-            rewardText.text = string.Empty;
+            primaryActionButton.gameObject.SetActive(true);
+            primaryActionButton.interactable = true;
+            SetButtonAnchoredY(primaryActionButton, PrimaryButtonY);
         }
 
-        if (nextButton != null)
-            nextButton.gameObject.SetActive(false);
-
-        if (retryButton != null)
-            SetButtonAnchoredY(retryButton, PrimaryButtonY);
-
-        if (skipButton != null)
-            SetButtonAnchoredY(skipButton, retryButtonShouldBeVisible ? FailSecondaryButtonY : PrimaryButtonY);
+        SetPrimaryActionLabel("Retry", "다시도전");
 
         if (lobbyButton != null)
         {
             lobbyButton.gameObject.SetActive(true);
-            SetButtonAnchoredY(lobbyButton, retryButtonShouldBeVisible ? FailTertiaryButtonY : SecondaryButtonY);
+            SetButtonAnchoredY(lobbyButton, SecondaryButtonY);
         }
 
-        SetLobbyButtonLabel("Restart");
+        SetLobbyButtonLabel("Lobby");
+    }
+
+    private void ConfigureClearPrimaryAction()
+    {
+        if (primaryActionButton != null)
+        {
+            primaryActionButton.gameObject.SetActive(true);
+            primaryActionButton.interactable = isNextStageAvailable;
+            SetButtonAnchoredY(primaryActionButton, PrimaryButtonY);
+        }
+
+        SetPrimaryActionLabel(
+            isNextStageAvailable ? "Next" : "Last",
+            isNextStageAvailable ? "다음" : "마지막");
+    }
+
+    private void SetPrimaryActionLabel(string englishLabel, string koreanLabel)
+    {
+        if (primaryActionButtonText != null)
+            primaryActionButtonText.text = IsKoreanLocaleSelected() ? koreanLabel : englishLabel;
+    }
+
+    private void DisablePrimaryActionLocalizer()
+    {
+        if (primaryActionButtonText == null)
+            return;
+
+        LocalizeStringEvent primaryActionLocalizer = primaryActionButtonText.GetComponent<LocalizeStringEvent>();
+        if (primaryActionLocalizer != null)
+            primaryActionLocalizer.enabled = false;
+    }
+
+    private void SetLobbyButtonLabel(string label)
+    {
+        CacheButtonLabels();
+        if (lobbyButtonText != null)
+            lobbyButtonText.text = string.IsNullOrWhiteSpace(label) ? lobbyButtonDefaultLabel : label;
+    }
+
+    private static string GetExitConditionKey(ExitCondition exitCondition)
+    {
+        switch (exitCondition)
+        {
+            case ExitCondition.OddOnly:
+                return ExitConditionOddKey;
+            case ExitCondition.EvenOnly:
+                return ExitConditionEvenKey;
+            default:
+                return ExitConditionOddKey;
+        }
+    }
+
+    private void UpdateExitConditionText(string localizedText)
+    {
+        if (exitConditionText != null)
+            exitConditionText.text = localizedText;
+    }
+
+    private void UpdateClearStageText(string localizedText)
+    {
+        if (clearStageText != null)
+        {
+            clearStageText.text = localizedText;
+            SetClearStageFont(IsKoreanLocaleSelected());
+            clearStageText.fontSize = IsKoreanLocaleSelected()
+                ? koreanClearStageFontSize
+                : clearStageDefaultFontSize;
+        }
+    }
+
+    private void UpdateFailureStageText(string localizedText)
+    {
+        if (clearStageText != null)
+        {
+            clearStageText.text = localizedText;
+            SetClearStageFont(IsKoreanLocaleSelected());
+            clearStageText.fontSize = IsKoreanLocaleSelected()
+                ? koreanClearStageFontSize
+                : clearStageDefaultFontSize;
+        }
+    }
+
+    private void CacheClearStageDefaults()
+    {
+        if (clearStageText != null)
+        {
+            clearStageDefaultFontSize = clearStageText.fontSize;
+            clearStageDefaultFont = clearStageText.font;
+        }
+    }
+
+    private void SetClearStageFont(bool useKoreanFont)
+    {
+        if (clearStageText == null)
+            return;
+
+        if (useKoreanFont && koreanClearStageFont != null)
+        {
+            clearStageText.font = koreanClearStageFont;
+            return;
+        }
+
+        RestoreClearStageDefaultFont();
+    }
+
+    private void RestoreClearStageDefaultFont()
+    {
+        if (clearStageText != null && clearStageDefaultFont != null)
+            clearStageText.font = clearStageDefaultFont;
+    }
+
+    private static bool IsKoreanLocaleSelected()
+    {
+        Locale selectedLocale = LocalizationSettings.SelectedLocale;
+        return selectedLocale != null && selectedLocale.Identifier.Code == KoreanLocaleCode;
+    }
+
+    private void UpdateMovesLeftText(string localizedText)
+    {
+        if (clearMoveText != null)
+            clearMoveText.text = localizedText;
     }
 
     private void SetButtonAnchoredY(Button button, float anchoredY)
     {
-        if (button == null) return;
-
-        RectTransform rectTransform = button.transform as RectTransform;
-        if (rectTransform == null) return;
+        RectTransform rectTransform = button == null ? null : button.transform as RectTransform;
+        if (rectTransform == null)
+            return;
 
         Vector2 anchoredPosition = rectTransform.anchoredPosition;
         anchoredPosition.y = anchoredY;
         rectTransform.anchoredPosition = anchoredPosition;
     }
 
-    private void NotifyRetryClicked()
+    private void NotifyPrimaryActionClicked()
     {
-        RetryClicked?.Invoke();
-    }
-
-    private void NotifyNextClicked()
-    {
-        NextClicked?.Invoke();
-    }
-
-    private void NotifySkipClicked()
-    {
-        SkipClicked?.Invoke();
+        if (isShowingClearResult)
+            NextClicked?.Invoke();
+        else
+            RestartClicked?.Invoke();
     }
 
     private void NotifyLobbyClicked()
@@ -329,22 +429,33 @@ public class GameUIView : MonoBehaviour
         LobbyClicked?.Invoke();
     }
 
+    private void NotifyHintClicked()
+    {
+        HintClicked?.Invoke();
+    }
+
+    private void NotifyHintConfirmed()
+    {
+        HintConfirmed?.Invoke();
+    }
+
+    private void NotifyHintCanceled()
+    {
+        HintCanceled?.Invoke();
+    }
+
     private void ShowPanel(CanvasGroup panel)
     {
-        if (panel == null) return;
-
-        EnsureResultInputBlocker(panel);
-        SetResultInputBlockerVisible(true);
+        if (panel == null)
+            return;
 
         panel.DOKill();
         panel.transform.DOKill();
-
         panel.gameObject.SetActive(true);
         panel.alpha = 0f;
         panel.transform.localScale = Vector3.one * 0.96f;
         panel.interactable = false;
         panel.blocksRaycasts = true;
-
         panel.DOFade(1f, panelTweenDuration);
         panel.transform.DOScale(Vector3.one, panelTweenDuration)
             .SetEase(panelEase)
@@ -353,16 +464,13 @@ public class GameUIView : MonoBehaviour
 
     private void HidePanel(CanvasGroup panel)
     {
-        if (panel == null) return;
-
-        SetResultInputBlockerVisible(false);
+        if (panel == null)
+            return;
 
         panel.DOKill();
         panel.transform.DOKill();
-
         panel.interactable = false;
         panel.blocksRaycasts = false;
-
         panel.DOFade(0f, panelTweenDuration);
         panel.transform.DOScale(Vector3.one * 0.98f, panelTweenDuration)
             .SetEase(Ease.InQuad)
@@ -373,70 +481,25 @@ public class GameUIView : MonoBehaviour
     {
         ResolveButtonTextReferences();
 
-        if (string.IsNullOrEmpty(retryButtonDefaultLabel))
-        {
-            if (retryButtonText != null && !string.IsNullOrWhiteSpace(retryButtonText.text))
-                retryButtonDefaultLabel = retryButtonText.text;
-            else
-                retryButtonDefaultLabel = "Retry";
-        }
-
-        if (string.IsNullOrEmpty(nextButtonDefaultLabel))
-        {
-            if (nextButtonText != null && !string.IsNullOrWhiteSpace(nextButtonText.text))
-                nextButtonDefaultLabel = nextButtonText.text;
-            else
-                nextButtonDefaultLabel = "Next";
-        }
-
         if (string.IsNullOrEmpty(lobbyButtonDefaultLabel))
         {
-            if (lobbyButtonText != null && !string.IsNullOrWhiteSpace(lobbyButtonText.text))
-                lobbyButtonDefaultLabel = lobbyButtonText.text;
-            else
-                lobbyButtonDefaultLabel = "Lobby";
+            lobbyButtonDefaultLabel = lobbyButtonText != null && !string.IsNullOrWhiteSpace(lobbyButtonText.text)
+                ? lobbyButtonText.text
+                : "Lobby";
         }
     }
 
     private void ResolveButtonTextReferences()
     {
-        if (retryButtonText == null && retryButton != null)
-            retryButtonText = retryButton.GetComponentInChildren<TMP_Text>(true);
+        if (primaryActionButtonText == null && primaryActionButton != null)
+            primaryActionButtonText = primaryActionButton.GetComponentInChildren<TMP_Text>(true);
 
         if (lobbyButtonText == null && lobbyButton != null)
             lobbyButtonText = lobbyButton.GetComponentInChildren<TMP_Text>(true);
     }
 
-    private void EnsureResultInputBlocker(CanvasGroup panel)
-    {
-        if (resultInputBlocker != null) return;
-        if (panel == null) return;
-        if (panel.transform.parent == null) return;
-
-        resultInputBlocker = new GameObject("ResultInputBlocker", typeof(RectTransform), typeof(Image));
-        resultInputBlocker.transform.SetParent(panel.transform.parent, false);
-
-        RectTransform blockerRect = resultInputBlocker.transform as RectTransform;
-        if (blockerRect != null)
-        {
-            blockerRect.anchorMin = Vector2.zero;
-            blockerRect.anchorMax = Vector2.one;
-            blockerRect.offsetMin = Vector2.zero;
-            blockerRect.offsetMax = Vector2.zero;
-            blockerRect.localScale = Vector3.one;
-        }
-
-        Image blockerImage = resultInputBlocker.GetComponent<Image>();
-        blockerImage.color = new Color(0f, 0f, 0f, 0.35f);
-        blockerImage.raycastTarget = true;
-
-        resultInputBlocker.SetActive(false);
-    }
-
     private void SetResultInputBlockerVisible(bool isVisible)
     {
-        EnsureResultInputBlocker(clearPanel);
-
         if (resultInputBlocker == null)
             return;
 

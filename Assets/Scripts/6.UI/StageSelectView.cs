@@ -21,9 +21,13 @@ public class StageSelectView : MonoBehaviour
     [SerializeField] private Button[] stageButtons;
     [SerializeField] private TMP_Text[] stageButtonTexts;
     [SerializeField] private float panelTweenDuration = 0.18f;
+    [SerializeField] private CanvasGroup sceneExitGroup;
+    [SerializeField] private float sceneExitDuration = 0.15f;
+    [SerializeField] private float sceneExitScale = 0.96f;
 
     private UnityAction[] stageButtonHandlers;
     private int pageStartStageIndex;
+    private Sequence sceneExitSequence;
 
     public event Action OpenStageSelectClicked;
     public event Action CloseStageSelectClicked;
@@ -73,6 +77,7 @@ public class StageSelectView : MonoBehaviour
 
         UnbindStageButtons();
         KillPanelTweens();
+        KillSceneExitTween();
     }
 
     public void SetPanelVisible(bool isVisible)
@@ -175,6 +180,36 @@ public class StageSelectView : MonoBehaviour
     }
 
     public int StageButtonCount => stageButtons == null ? 0 : stageButtons.Length;
+
+    public void PlayGameStartTransition(Action completed)
+    {
+        KillSceneExitTween();
+
+        if (sceneExitGroup == null)
+        {
+            completed?.Invoke();
+            return;
+        }
+
+        Transform exitTransform = sceneExitGroup.transform;
+        Vector3 startScale = exitTransform.localScale;
+        Vector3 targetScale = startScale * Mathf.Clamp(sceneExitScale, 0.01f, 1f);
+        float duration = Mathf.Max(0.01f, sceneExitDuration);
+
+        sceneExitGroup.interactable = false;
+        sceneExitGroup.blocksRaycasts = true;
+
+        sceneExitSequence = DOTween.Sequence();
+        sceneExitSequence.SetUpdate(true);
+        sceneExitSequence.SetTarget(sceneExitGroup);
+        sceneExitSequence.Join(sceneExitGroup.DOFade(0f, duration).SetEase(Ease.InQuad));
+        sceneExitSequence.Join(exitTransform.DOScale(targetScale, duration).SetEase(Ease.InQuad));
+        sceneExitSequence.OnComplete(() =>
+        {
+            sceneExitSequence = null;
+            completed?.Invoke();
+        });
+    }
 
     private void BindStageButtons()
     {
@@ -310,5 +345,20 @@ public class StageSelectView : MonoBehaviour
 
         panel.DOKill();
         panel.transform.DOKill();
+    }
+
+    private void KillSceneExitTween()
+    {
+        if (sceneExitSequence != null)
+        {
+            sceneExitSequence.Kill(false);
+            sceneExitSequence = null;
+        }
+
+        if (sceneExitGroup != null)
+        {
+            sceneExitGroup.DOKill();
+            sceneExitGroup.transform.DOKill();
+        }
     }
 }

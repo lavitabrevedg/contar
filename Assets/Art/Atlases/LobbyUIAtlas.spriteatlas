@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: LobbyUIAtlas
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 1
+      compressionQuality: 50
+      maxTextureSize: 2048
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: Android
+      m_MaxTextureSize: 1024
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: 48
+      m_TextureCompression: 1
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 1
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 21300000, guid: 3547f06b77a2ad047b61a48745736ba5, type: 3}
+    - {fileID: 21300000, guid: c042ce6a89e8edf4fa8cfb567eabd7de, type: 3}
+    - {fileID: 21300000, guid: 66a0aea6fe4e7a149ae15503848f5e17, type: 3}
+    - {fileID: 21300000, guid: 46eabba665cba1546bdc1d0638026e74, type: 3}
+    - {fileID: 21300000, guid: 2a95d8fe3af200c4693bb5ef8d250e16, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys:
+    - 46eabba665cba1546bdc1d0638026e74: 21300000
+    - 66a0aea6fe4e7a149ae15503848f5e17: 21300000
+    - c042ce6a89e8edf4fa8cfb567eabd7de: 21300000
+    - 3547f06b77a2ad047b61a48745736ba5: 21300000
+    - 2a95d8fe3af200c4693bb5ef8d250e16: 21300000
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites:
+  - {fileID: 21300000, guid: 46eabba665cba1546bdc1d0638026e74, type: 3}
+  - {fileID: 21300000, guid: 66a0aea6fe4e7a149ae15503848f5e17, type: 3}
+  - {fileID: 21300000, guid: c042ce6a89e8edf4fa8cfb567eabd7de, type: 3}
+  - {fileID: 21300000, guid: 3547f06b77a2ad047b61a48745736ba5, type: 3}
+  - {fileID: 21300000, guid: 2a95d8fe3af200c4693bb5ef8d250e16, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - pinkButton
+  - greenButton
+  - blueButton
+  - StageSelectPanelBackground
+  - redo_btn
+  m_RenderDataMap: {}
+  m_Tag: LobbyUIAtlas
+  m_IsVariant: 0

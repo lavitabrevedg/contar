@@ -1,9 +1,9 @@
-using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameFlowController : MonoBehaviour
 {
-    private const int ReviveBonusMoveCount = 2;
+    private const float HintAvailabilityRefreshInterval = 0.5f;
 
     [SerializeField] private GameUIPresenter uiPresenter;
     [SerializeField] private GameManager gameManager;
@@ -13,8 +13,12 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private bool useInspectorStageOnStart;
 
     private IAdService adService;
+    private PuzzleSolveResult pendingHintResult;
     private bool isBound;
     private bool isShowingAd;
+    private bool isHintUnlocked;
+    private bool isMapRevealPlaying;
+    private float nextHintAvailabilityRefreshTime;
 
     private void Awake()
     {
@@ -29,12 +33,24 @@ public class GameFlowController : MonoBehaviour
     private void Start()
     {
         Bind();
-        LoadInitialStage();
+        bool stageLoaded = LoadInitialStage();
+        PlayMapReveal(stageLoaded);
+        RefreshHintAvailability();
+    }
+
+    private void Update()
+    {
+        if (Time.unscaledTime < nextHintAvailabilityRefreshTime)
+            return;
+
+        nextHintAvailabilityRefreshTime = Time.unscaledTime + HintAvailabilityRefreshInterval;
+        RefreshHintAvailability();
     }
 
     private void OnDisable()
     {
         Unbind();
+        EndHintInteraction(false);
     }
 
     private void ResolveReferences()
@@ -79,6 +95,8 @@ public class GameFlowController : MonoBehaviour
         }
 
         adService = googleAdMobService;
+#elif UNITY_EDITOR
+        adService = new EditorHintAdService();
 #else
         adService = null;
 #endif
@@ -86,77 +104,41 @@ public class GameFlowController : MonoBehaviour
 
     private void Bind()
     {
-        if (isBound) return;
+        if (isBound)
+            return;
 
         ResolveReferences();
-        if (uiPresenter == null) return;
+        if (uiPresenter == null)
+            return;
 
-        uiPresenter.RetryRequested -= OnRetryRequested;
-        uiPresenter.NextStageRequested -= OnNextStageRequested;
-        uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
-        uiPresenter.RestartRequested -= OnRestartRequested;
-        uiPresenter.LobbyRequested -= OnLobbyRequested;
-        uiPresenter.RetryRequested += OnRetryRequested;
         uiPresenter.NextStageRequested += OnNextStageRequested;
-        uiPresenter.AdSkipTicketRequested += OnAdSkipTicketRequested;
         uiPresenter.RestartRequested += OnRestartRequested;
         uiPresenter.LobbyRequested += OnLobbyRequested;
-
+        uiPresenter.HintRequested += OnHintRequested;
+        uiPresenter.HintConfirmed += OnHintConfirmed;
+        uiPresenter.HintCanceled += OnHintCanceled;
         isBound = true;
     }
 
     private void Unbind()
     {
-        if (!isBound || uiPresenter == null) return;
+        if (!isBound || uiPresenter == null)
+            return;
 
-        uiPresenter.RetryRequested -= OnRetryRequested;
         uiPresenter.NextStageRequested -= OnNextStageRequested;
-        uiPresenter.AdSkipTicketRequested -= OnAdSkipTicketRequested;
         uiPresenter.RestartRequested -= OnRestartRequested;
         uiPresenter.LobbyRequested -= OnLobbyRequested;
-
+        uiPresenter.HintRequested -= OnHintRequested;
+        uiPresenter.HintConfirmed -= OnHintConfirmed;
+        uiPresenter.HintCanceled -= OnHintCanceled;
         isBound = false;
-    }
-
-    private void OnRetryRequested()
-    {
-        if (gameManager == null)
-            ResolveReferences();
-
-        if (gameManager == null) return;
-        if (gameManager.State != GameState.Failed) return;
-
-        ShowAdThenRun(AdPlacement.ReviveBonusMoves, ContinueWithReviveBonusMoves);
     }
 
     private void OnNextStageRequested()
     {
-        LoadNextStage();
-    }
-
-    private void OnAdSkipTicketRequested()
-    {
-        if (progressService == null || gameManager == null)
-            ResolveReferences();
-
-        if (gameManager == null)
-        {
-            Debug.LogWarning("[GameFlowController] Cannot continue because GameManager is missing.");
-            return;
-        }
-
-        if (gameManager.State != GameState.Failed)
-            return;
-
-        if (progressService != null && progressService.TryUseAdSkipTicket())
-        {
-            ContinueWithReviveBonusMoves();
-            return;
-        }
-
-        Debug.Log("[GameFlowController] Cannot continue because there are no skip tickets.");
-        if (uiPresenter != null)
-            uiPresenter.RefreshProgressView();
+        ResetHintAttempt();
+        bool stageLoaded = LoadNextStage();
+        PlayMapReveal(stageLoaded);
     }
 
     private void OnRestartRequested()
@@ -164,30 +146,209 @@ public class GameFlowController : MonoBehaviour
         if (gameManager == null)
             ResolveReferences();
 
-        if (gameManager == null) return;
+        if (gameManager == null)
+            return;
 
+        ResetHintAttempt();
         gameManager.RestartStage();
+        PlayMapReveal(true);
     }
 
     private void OnLobbyRequested()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("LobbyScene");
+        ResetHintAttempt();
+        SceneManager.LoadScene("LobbyScene");
     }
 
-    private void LoadInitialStage()
+    private void OnHintRequested()
     {
-        ResolveReferences();
+        if (gameManager == null)
+            ResolveReferences();
 
+        if (gameManager == null || gameManager.State != GameState.Playing)
+            return;
+
+        if (gameManager.IsHintRouteVisible)
+            return;
+
+        gameManager.StopHintRoute();
+
+        PuzzleSolveResult solveResult;
+        if (!gameManager.TrySolveCurrentState(out solveResult))
+            return;
+
+        if (!solveResult.IsSolvable)
+        {
+            pendingHintResult = null;
+            gameManager.SetInputBlocked(true);
+            uiPresenter.ShowHintMessage("Restart Recommended");
+            return;
+        }
+
+        if (isHintUnlocked)
+        {
+            gameManager.PlayHintRoute(solveResult.Route);
+            return;
+        }
+
+        if (adService == null || !adService.IsReady(AdPlacement.HintRoute))
+        {
+            RefreshHintAvailability();
+            return;
+        }
+
+        pendingHintResult = solveResult;
+        gameManager.SetInputBlocked(true);
+        uiPresenter.ShowHintConfirmation();
+    }
+
+    private void OnHintConfirmed()
+    {
+        if (isShowingAd || pendingHintResult == null)
+            return;
+
+        if (adService == null || !adService.IsReady(AdPlacement.HintRoute))
+        {
+            pendingHintResult = null;
+            gameManager.SetInputBlocked(false);
+            uiPresenter.HideHintDialog();
+            RefreshHintAvailability();
+            return;
+        }
+
+        isShowingAd = true;
+        uiPresenter.HideHintDialog();
+        RefreshHintAvailability();
+        adService.Show(AdPlacement.HintRoute, OnHintAdCompleted);
+    }
+
+    private void OnHintAdCompleted(bool rewardEarned)
+    {
+        isShowingAd = false;
+        pendingHintResult = null;
+
+        if (!rewardEarned)
+        {
+            if (gameManager != null)
+                gameManager.SetInputBlocked(true);
+
+            uiPresenter.ShowHintMessage("Ad Not Completed");
+            RefreshHintAvailability();
+            return;
+        }
+
+        isHintUnlocked = true;
+        if (gameManager != null)
+            gameManager.SetInputBlocked(false);
+
+        RevealCurrentRoute();
+        RefreshHintAvailability();
+    }
+
+    private void OnHintCanceled()
+    {
+        EndHintInteraction(true);
+    }
+
+    private void RevealCurrentRoute()
+    {
         if (gameManager == null)
             return;
 
-        if (useInspectorStageOnStart && TryLoadInspectorStage())
+        PuzzleSolveResult solveResult;
+        if (!gameManager.TrySolveCurrentState(out solveResult) || !solveResult.IsSolvable)
+        {
+            gameManager.SetInputBlocked(true);
+            uiPresenter.ShowHintMessage("Restart Recommended");
             return;
+        }
+
+        gameManager.PlayHintRoute(solveResult.Route);
+    }
+
+    private void RefreshHintAvailability()
+    {
+        if (uiPresenter == null)
+            return;
+
+        bool isPlaying = gameManager != null && gameManager.State == GameState.Playing;
+        bool adIsReady = adService != null && adService.IsReady(AdPlacement.HintRoute);
+        bool isInteractable = isPlaying
+            && !isShowingAd
+            && !isMapRevealPlaying
+            && (isHintUnlocked || adIsReady);
+        uiPresenter.SetHintButtonState(isPlaying, isInteractable);
+    }
+
+    private void EndHintInteraction(bool refreshAvailability)
+    {
+        pendingHintResult = null;
+        if (gameManager != null)
+            gameManager.SetInputBlocked(false);
+
+        if (uiPresenter != null)
+            uiPresenter.HideHintDialog();
+
+        if (refreshAvailability)
+            RefreshHintAvailability();
+    }
+
+    private void ResetHintAttempt()
+    {
+        isHintUnlocked = false;
+        isShowingAd = false;
+        pendingHintResult = null;
+
+        if (gameManager != null)
+        {
+            gameManager.StopHintRoute();
+            gameManager.SetInputBlocked(false);
+        }
+
+        if (uiPresenter != null)
+            uiPresenter.HideHintDialog();
+    }
+
+    private bool LoadInitialStage()
+    {
+        ResolveReferences();
+        if (gameManager == null)
+            return false;
+
+        if (useInspectorStageOnStart && TryLoadInspectorStage())
+            return true;
 
         if (LoadSavedStage())
-            return;
+            return true;
 
-        TryLoadInspectorStage();
+        return TryLoadInspectorStage();
+    }
+
+    private void PlayMapReveal(bool stageLoaded)
+    {
+        if (gameManager == null)
+            ResolveReferences();
+
+        MapGenerator mapGenerator = gameManager == null ? null : gameManager.MapGenerator;
+        if (!stageLoaded || gameManager == null || mapGenerator == null)
+        {
+            CompleteMapReveal();
+            return;
+        }
+
+        isMapRevealPlaying = true;
+        gameManager.SetInputBlocked(true);
+        mapGenerator.PlayInitialReveal(CompleteMapReveal);
+    }
+
+    private void CompleteMapReveal()
+    {
+        isMapRevealPlaying = false;
+
+        if (gameManager != null)
+            gameManager.SetInputBlocked(false);
+
+        RefreshHintAvailability();
     }
 
     private bool TryLoadInspectorStage()
@@ -227,11 +388,13 @@ public class GameFlowController : MonoBehaviour
     private bool LoadSavedStage()
     {
         ResolveReferences();
-
         if (progressService == null || stageCatalog == null || gameManager == null)
             return false;
 
-        int stageIndex = Mathf.Clamp(progressService.CurrentStageIndex, 0, Mathf.Max(0, stageCatalog.StageCount - 1));
+        int stageIndex = Mathf.Clamp(
+            progressService.CurrentStageIndex,
+            0,
+            Mathf.Max(0, stageCatalog.StageCount - 1));
         return LoadStage(stageIndex);
     }
 
@@ -240,7 +403,8 @@ public class GameFlowController : MonoBehaviour
         if (stageCatalog == null || gameManager == null)
             return false;
 
-        if (!stageCatalog.TryGetStage(stageIndex, out MapData mapData))
+        MapData mapData;
+        if (!stageCatalog.TryGetStage(stageIndex, out mapData))
             return false;
 
         gameManager.SetStage(mapData, stageIndex);
@@ -264,53 +428,7 @@ public class GameFlowController : MonoBehaviour
             return true;
 
         Debug.Log("[GameFlowController] All stages are cleared.");
-        if (uiPresenter != null)
-            uiPresenter.RefreshProgressView();
-
+        uiPresenter.RefreshProgressView();
         return false;
-    }
-
-    private void ContinueWithReviveBonusMoves()
-    {
-        if (gameManager == null)
-            return;
-
-        gameManager.ContinueWithBonusMoves(ReviveBonusMoveCount);
-    }
-
-    private void ShowAdThenRun(AdPlacement placement, Action completed)
-    {
-        if (isShowingAd)
-            return;
-
-        if (progressService == null || adService == null)
-            ResolveReferences();
-
-        int stageIndex = progressService == null ? 0 : progressService.CurrentStageIndex;
-        if (progressService == null || progressService.ShouldSuppressAds(stageIndex))
-        {
-            Debug.Log($"[GameFlowController] Revive ad is unavailable for this stage. stageIndex={stageIndex}");
-            return;
-        }
-
-        if (adService == null || !adService.IsReady(placement))
-        {
-            Debug.LogWarning($"[GameFlowController] Ad is not ready. placement={placement}");
-            return;
-        }
-
-        isShowingAd = true;
-        adService.Show(placement, adSucceeded =>
-        {
-            isShowingAd = false;
-
-            if (!adSucceeded)
-            {
-                Debug.LogWarning($"[GameFlowController] Ad failed. Reward was not granted. placement={placement}");
-                return;
-            }
-
-            completed?.Invoke();
-        });
     }
 }

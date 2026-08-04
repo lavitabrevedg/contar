@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BoardAtlas
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 1
+      compressionQuality: 50
+      maxTextureSize: 2048
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: Android
+      m_MaxTextureSize: 1024
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: 50
+      m_TextureCompression: 1
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 1
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 6821353551706889206, guid: c44eea307ef84bb45aa6f16fbf3a00bb, type: 3}
+    - {fileID: 5179650501336446038, guid: b95ac234493ec084581e68a38c512260, type: 3}
+    - {fileID: -1056164455145340854, guid: 11b7710ec79fd9b4cb6331b4f9c01814, type: 3}
+    - {fileID: -6739178128570095236, guid: 3f5e5c35d8f6ff64f9a0bdfe9c9a3254, type: 3}
+    - {fileID: -3848870881679880540, guid: 08e384112f611d94db17cb7e7d01e42c, type: 3}
+    - {fileID: -2677216586428626032, guid: b8fe7aa67a3cd5f418f972e9bca17139, type: 3}
+    - {fileID: 5916051876468646744, guid: efdf2578cc1573c44a5f1dc49d71f53f, type: 3}
+    - {fileID: 5515439225188256779, guid: 06cf5b84bb5320746919460e5509c769, type: 3}
+    - {fileID: 3345508739736421500, guid: ed3847d4c67fe8446acffe2e6dced3f7, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys:
+    - c44eea307ef84bb45aa6f16fbf3a00bb: 6821353551706889206
+    - 08e384112f611d94db17cb7e7d01e42c: -3848870881679880540
+    - b95ac234493ec084581e68a38c512260: 5179650501336446038
+    - 06cf5b84bb5320746919460e5509c769: 5515439225188256779
+    - ed3847d4c67fe8446acffe2e6dced3f7: 3345508739736421500
+    - 3f5e5c35d8f6ff64f9a0bdfe9c9a3254: -6739178128570095236
+    - b8fe7aa67a3cd5f418f972e9bca17139: -2677216586428626032
+    - efdf2578cc1573c44a5f1dc49d71f53f: 5916051876468646744
+    - 11b7710ec79fd9b4cb6331b4f9c01814: -1056164455145340854
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites:
+  - {fileID: 6821353551706889206, guid: c44eea307ef84bb45aa6f16fbf3a00bb, type: 3}
+  - {fileID: -3848870881679880540, guid: 08e384112f611d94db17cb7e7d01e42c, type: 3}
+  - {fileID: 5179650501336446038, guid: b95ac234493ec084581e68a38c512260, type: 3}
+  - {fileID: 5515439225188256779, guid: 06cf5b84bb5320746919460e5509c769, type: 3}
+  - {fileID: 3345508739736421500, guid: ed3847d4c67fe8446acffe2e6dced3f7, type: 3}
+  - {fileID: -6739178128570095236, guid: 3f5e5c35d8f6ff64f9a0bdfe9c9a3254, type: 3}
+  - {fileID: -2677216586428626032, guid: b8fe7aa67a3cd5f418f972e9bca17139, type: 3}
+  - {fileID: 5916051876468646744, guid: efdf2578cc1573c44a5f1dc49d71f53f, type: 3}
+  - {fileID: -1056164455145340854, guid: 11b7710ec79fd9b4cb6331b4f9c01814, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - AnyExitTile_0
+  - ObstacleTile_0
+  - EmptyTile_0
+  - WallTile_0
+  - Player2_0
+  - Movetile_0
+  - OddExitTile_0
+  - StartTile_0
+  - EvenExitTile_0
+  m_RenderDataMap: {}
+  m_Tag: BoardAtlas
+  m_IsVariant: 0

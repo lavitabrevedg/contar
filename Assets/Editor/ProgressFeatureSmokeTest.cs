@@ -6,7 +6,6 @@ public static class ProgressFeatureSmokeTest
 {
     private const string CurrentStageIndexKey = "contar.progress.currentStageIndex";
     private const string HighestClearedStageIndexKey = "contar.progress.highestClearedStageIndex";
-    private const string SkipTicketCountKey = "contar.progress.skipTicketCount";
     private const string FailureStageIndexKey = "contar.progress.failureStageIndex";
     private const string FailureCountKey = "contar.progress.failureCount";
     private const string CatalogPath = "Assets/Resources/SettingDatas/StageCatalog.asset";
@@ -29,41 +28,19 @@ public static class ProgressFeatureSmokeTest
 
             AssertEqual(0, progressService.CurrentStageIndex, "default current stage");
             AssertEqual(-1, progressService.HighestClearedStageIndex, "default highest clear");
-            AssertEqual(3, progressService.SkipTicketCount, "default ad skip tickets");
-            AssertTrue(progressService.ShouldSuppressAds(0), "stage 0 should suppress ads");
-            AssertTrue(progressService.ShouldSuppressAds(5), "stage 5 should suppress ads");
-            AssertTrue(!progressService.ShouldSuppressAds(6), "stage 6 should allow ads");
 
-            StageClearProgressResult firstReward = progressService.MarkStageCleared(2);
-            AssertTrue(firstReward.WasNewClear, "stage 2 should be a new clear");
-            AssertTrue(firstReward.GrantedSkipTicket, "stage 2 should grant an ad skip ticket");
-            AssertEqual(4, firstReward.SkipTicketCount, "ad skip ticket after third clear");
+            StageClearProgressResult firstClear = progressService.MarkStageCleared(2);
+            AssertTrue(firstClear.WasNewClear, "stage 2 should be a new clear");
+            AssertEqual(2, progressService.HighestClearedStageIndex, "highest clear after stage 2");
 
-            StageClearProgressResult duplicateReward = progressService.MarkStageCleared(2);
-            AssertTrue(!duplicateReward.WasNewClear, "duplicate clear should not be new");
-            AssertTrue(!duplicateReward.GrantedSkipTicket, "duplicate clear should not grant");
-            AssertEqual(4, duplicateReward.SkipTicketCount, "ad skip ticket after duplicate clear");
-
-            progressService.SetCurrentStage(6);
-            int stageBeforeAdSkipTicket = progressService.CurrentStageIndex;
-            AssertTrue(progressService.TryUseAdSkipTicket(), "first ad skip ticket should be usable");
-            AssertEqual(stageBeforeAdSkipTicket, progressService.CurrentStageIndex, "ad skip ticket should not advance the stage");
-            AssertTrue(progressService.TryUseAdSkipTicket(), "second ad skip ticket should be usable");
-            AssertTrue(progressService.TryUseAdSkipTicket(), "third ad skip ticket should be usable");
-            AssertTrue(progressService.TryUseAdSkipTicket(), "fourth ad skip ticket should be usable");
-            AssertTrue(!progressService.TryUseAdSkipTicket(), "ad skip ticket should not be usable at zero");
-            AssertEqual(0, progressService.SkipTicketCount, "ad skip ticket after uses");
-
-            AssertTrue(!progressService.ShouldSuppressAds(progressService.CurrentStageIndex), "stage 6 should allow ads");
-            bool usedAdSkipTicketAtZero = progressService.TryUseAdSkipTicket();
-            AssertTrue(!usedAdSkipTicketAtZero, "ad skip ticket should still be unavailable at zero");
-            AssertEqual(stageBeforeAdSkipTicket, progressService.CurrentStageIndex, "failed ad skip ticket use should not advance the stage");
+            StageClearProgressResult duplicateClear = progressService.MarkStageCleared(2);
+            AssertTrue(!duplicateClear.WasNewClear, "duplicate clear should not be new");
 
             StageProgressSnapshot snapshot = progressService.CreateSnapshot();
             string snapshotJson = JsonUtility.ToJson(snapshot);
             AssertTrue(!snapshotJson.Contains("failureCount"), "snapshot should not include failure count");
+            AssertTrue(!snapshotJson.Contains("skipTicketCount"), "snapshot should not include removed ticket data");
             AssertTrue(snapshotJson.Contains("highestClearedStageIndex"), "snapshot should include highest clear");
-            AssertTrue(snapshotJson.Contains("skipTicketCount"), "snapshot should include skip ticket count");
             AssertTrue(snapshotJson.Contains("updatedAtUtcTicks"), "snapshot should include update timestamp");
 
             PlayerPrefs.SetInt(FailureCountKey, 9);
@@ -75,11 +52,12 @@ public static class ProgressFeatureSmokeTest
             AssertTrue(catalog != null, "stage catalog should exist");
             AssertTrue(catalog.StageCount > 0, "stage catalog should have at least one stage");
 
-            bool foundFirstStage = catalog.TryGetStage(0, out MapData firstStage);
+            MapData firstStage;
+            bool foundFirstStage = catalog.TryGetStage(0, out firstStage);
             AssertTrue(foundFirstStage, "first stage should load");
             AssertTrue(firstStage != null, "first stage should not be null");
 
-            Debug.Log("[ProgressFeatureSmokeTest] Passed. Manual checks: Stage 1-6 hide revive ads on fail, Stage 7+ can show Watch Ad +2, Skip Ticket +2 spends one ticket, and result panels block background UI input.");
+            Debug.Log("[ProgressFeatureSmokeTest] Passed. Progress contains only highest clear and timestamp.");
         }
         finally
         {
@@ -94,7 +72,6 @@ public static class ProgressFeatureSmokeTest
         {
             new SavedPref(CurrentStageIndexKey),
             new SavedPref(HighestClearedStageIndexKey),
-            new SavedPref(SkipTicketCountKey),
             new SavedPref(FailureStageIndexKey),
             new SavedPref(FailureCountKey)
         };
@@ -102,8 +79,8 @@ public static class ProgressFeatureSmokeTest
 
     private static void RestorePrefs(SavedPref[] savedPrefs)
     {
-        for (int i = 0; i < savedPrefs.Length; i++)
-            savedPrefs[i].Restore();
+        for (int prefIndex = 0; prefIndex < savedPrefs.Length; prefIndex++)
+            savedPrefs[prefIndex].Restore();
 
         PlayerPrefs.Save();
     }
@@ -111,12 +88,6 @@ public static class ProgressFeatureSmokeTest
     private static void AssertEqual(int expected, int actual, string label)
     {
         if (expected != actual)
-            throw new InvalidOperationException($"{label}: expected={expected}, actual={actual}");
-    }
-
-    private static void AssertEqual(string expected, string actual, string label)
-    {
-        if (!string.Equals(expected, actual, StringComparison.Ordinal))
             throw new InvalidOperationException($"{label}: expected={expected}, actual={actual}");
     }
 

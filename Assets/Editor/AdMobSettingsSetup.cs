@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class AdMobSettingsSetup
 {
-    private const string SettingsPath = "Assets/Resources/AdMobSettings.asset";
+    private const string SettingsPath = "Assets/Resources/SettingDatas/AdMobSettings.asset";
 
     [MenuItem("contar/Ensure AdMob Settings")]
     public static void EnsureDefaultAsset()

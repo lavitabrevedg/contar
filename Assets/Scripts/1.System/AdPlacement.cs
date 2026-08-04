@@ -1,4 +1,4 @@
 public enum AdPlacement
 {
-    ReviveBonusMoves
+    HintRoute
 }

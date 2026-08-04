@@ -11,11 +11,12 @@ public class GameUIPresenter : MonoBehaviour
     private bool isBound;
     private bool isProgressBound;
 
-    public event Action RetryRequested;
     public event Action NextStageRequested;
-    public event Action AdSkipTicketRequested;
     public event Action RestartRequested;
     public event Action LobbyRequested;
+    public event Action HintRequested;
+    public event Action HintConfirmed;
+    public event Action HintCanceled;
 
     private void Awake()
     {
@@ -61,29 +62,23 @@ public class GameUIPresenter : MonoBehaviour
     private void Bind()
     {
         ResolveReferences();
-        if (stateModel == null || view == null) return;
+        if (stateModel == null || view == null)
+            return;
 
         if (!isBound)
         {
-            stateModel.MoveCountChanged -= OnMoveCountChanged;
-            stateModel.StateChanged -= OnStateChanged;
-            view.RetryClicked -= OnRetryClicked;
-            view.NextClicked -= OnNextClicked;
-            view.SkipClicked -= OnSkipClicked;
-            view.LobbyClicked -= OnLobbyClicked;
-
             stateModel.MoveCountChanged += OnMoveCountChanged;
             stateModel.StateChanged += OnStateChanged;
-            view.RetryClicked += OnRetryClicked;
+            view.RestartClicked += OnRestartClicked;
             view.NextClicked += OnNextClicked;
-            view.SkipClicked += OnSkipClicked;
             view.LobbyClicked += OnLobbyClicked;
-
+            view.HintClicked += OnHintClicked;
+            view.HintConfirmed += OnHintConfirmed;
+            view.HintCanceled += OnHintCanceled;
             isBound = true;
         }
 
         BindProgress();
-
         view.SetMoveCount(stateModel.MoveCount);
         RefreshProgressView();
         OnStateChanged(stateModel.State);
@@ -91,10 +86,9 @@ public class GameUIPresenter : MonoBehaviour
 
     private void BindProgress()
     {
-        if (isProgressBound) return;
-        if (progressService == null) return;
+        if (isProgressBound || progressService == null)
+            return;
 
-        progressService.ProgressChanged -= OnProgressChanged;
         progressService.ProgressChanged += OnProgressChanged;
         isProgressBound = true;
     }
@@ -105,10 +99,12 @@ public class GameUIPresenter : MonoBehaviour
         {
             stateModel.MoveCountChanged -= OnMoveCountChanged;
             stateModel.StateChanged -= OnStateChanged;
-            view.RetryClicked -= OnRetryClicked;
+            view.RestartClicked -= OnRestartClicked;
             view.NextClicked -= OnNextClicked;
-            view.SkipClicked -= OnSkipClicked;
             view.LobbyClicked -= OnLobbyClicked;
+            view.HintClicked -= OnHintClicked;
+            view.HintConfirmed -= OnHintConfirmed;
+            view.HintCanceled -= OnHintCanceled;
         }
 
         if (isProgressBound && progressService != null)
@@ -121,32 +117,44 @@ public class GameUIPresenter : MonoBehaviour
     public void RefreshProgressView()
     {
         ResolveReferences();
-        if (view == null) return;
-
-        if (progressService == null)
-        {
-            view.SetStageInfo(0, 0);
-            view.SetExitCondition(GetCurrentExitCondition());
-            view.SetSkipTicketCount(0, 0);
-            view.SetNextStageAvailable(false);
-            view.SetRetryButtonState(false, false, "Watch Ad +2");
-            view.SetSkipButtonState(false, false, "No Skip Tickets");
+        if (view == null)
             return;
-        }
 
         int stageCount = stageCatalog == null ? 0 : stageCatalog.StageCount;
-        int stageNumber = stageCount <= 0 ? 0 : Mathf.Clamp(progressService.CurrentStageIndex + 1, 1, stageCount);
-        bool hasNextStage = stageCount > 0 && progressService.CurrentStageIndex + 1 < stageCount;
-        bool canShowReviveAd = !progressService.ShouldSuppressAds(progressService.CurrentStageIndex);
-        bool hasAdSkipTicket = progressService.HasAdSkipTicket;
-        string skipLabel = hasAdSkipTicket ? $"Use Skip Ticket +2 ({progressService.SkipTicketCount})" : "No Skip Tickets";
+        int stageNumber = progressService == null || stageCount <= 0
+            ? 0
+            : Mathf.Clamp(progressService.CurrentStageIndex + 1, 1, stageCount);
+        bool hasNextStage = progressService != null
+            && stageCount > 0
+            && progressService.CurrentStageIndex + 1 < stageCount;
 
         view.SetStageInfo(stageNumber, stageCount);
         view.SetExitCondition(GetCurrentExitCondition());
-        view.SetSkipTicketCount(progressService.SkipTicketCount, progressService.MaxSkipTicketCountValue);
         view.SetNextStageAvailable(hasNextStage);
-        view.SetRetryButtonState(canShowReviveAd, canShowReviveAd, "Watch Ad +2");
-        view.SetSkipButtonState(true, hasAdSkipTicket, skipLabel);
+    }
+
+    public void SetHintButtonState(bool isVisible, bool isInteractable)
+    {
+        if (view != null)
+            view.SetHintButtonState(isVisible, isInteractable);
+    }
+
+    public void ShowHintConfirmation()
+    {
+        if (view != null)
+            view.ShowHintConfirmation();
+    }
+
+    public void ShowHintMessage(string message)
+    {
+        if (view != null)
+            view.ShowHintMessage(message);
+    }
+
+    public void HideHintDialog()
+    {
+        if (view != null)
+            view.HideHintDialog();
     }
 
     private ExitCondition GetCurrentExitCondition()
@@ -181,6 +189,8 @@ public class GameUIPresenter : MonoBehaviour
 
     private void OnStateChanged(GameState state)
     {
+        SetHintButtonState(state == GameState.Playing, false);
+
         if (state == GameState.Playing)
         {
             RefreshProgressView();
@@ -208,9 +218,9 @@ public class GameUIPresenter : MonoBehaviour
         RefreshProgressView();
     }
 
-    private void OnRetryClicked()
+    private void OnRestartClicked()
     {
-        RetryRequested?.Invoke();
+        RestartRequested?.Invoke();
     }
 
     private void OnNextClicked()
@@ -218,31 +228,30 @@ public class GameUIPresenter : MonoBehaviour
         NextStageRequested?.Invoke();
     }
 
-    private void OnSkipClicked()
-    {
-        AdSkipTicketRequested?.Invoke();
-    }
-
     private void OnLobbyClicked()
     {
-        if (stateModel != null && stateModel.State == GameState.Failed)
-        {
-            RestartRequested?.Invoke();
-            return;
-        }
-
         LobbyRequested?.Invoke();
+    }
+
+    private void OnHintClicked()
+    {
+        HintRequested?.Invoke();
+    }
+
+    private void OnHintConfirmed()
+    {
+        HintConfirmed?.Invoke();
+    }
+
+    private void OnHintCanceled()
+    {
+        HintCanceled?.Invoke();
     }
 
     private void SetClearResultView()
     {
-        if (view == null)
-            return;
-
-        GameManager gameManager = GameManager.Instance;
         int stageNumber = progressService == null ? 0 : progressService.CurrentStageIndex + 1;
         int remainingMoveCount = stateModel == null ? 0 : stateModel.MoveCount;
-        StageClearProgressResult progressResult = gameManager == null ? new StageClearProgressResult(false, false, 0) : gameManager.LastStageClearProgressResult;
-        view.SetClearResult(stageNumber, remainingMoveCount, progressResult.GrantedSkipTicket, progressResult.SkipTicketCount);
+        view.SetClearResult(stageNumber, remainingMoveCount);
     }
 }

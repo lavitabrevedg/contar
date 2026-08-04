@@ -5,6 +5,5 @@ public class NumberObstacle : BaseTile
     public override void Init(SerializedTile data)
     {
         value = data.value;
-        SetTileLabel(value.ToString());
     }
 }

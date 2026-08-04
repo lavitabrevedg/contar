@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52b856754b079474daeae82100df9887, type: 3}
   m_Name: AdMobSettings
   m_EditorClassIdentifier: Assembly-CSharp::AdMobSettings
-  androidInterstitialAdUnitId: ca-app-pub-8897720651478525/8560563594
+  androidRewardedAdUnitId: ca-app-pub-8897720651478525/6579510894
   useTestAdsInDevelopmentBuild: 1

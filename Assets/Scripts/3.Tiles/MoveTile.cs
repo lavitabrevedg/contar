@@ -29,7 +29,7 @@ public class MoveTile : BaseTile
 
         AudioService audioService = FindFirstObjectByType<AudioService>();
         if (audioService != null)
-            audioService.PlayMoveTile();
+            audioService.PlayMoveTile(value);
 
         ClearTileLabelAnimated();
     }

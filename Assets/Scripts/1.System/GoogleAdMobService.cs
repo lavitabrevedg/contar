@@ -1,25 +1,31 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using GoogleMobileAds.Api;
-using GoogleMobileAds.Common;
 using GoogleMobileAds.Ump.Api;
 using UnityEngine;
 
 public class GoogleAdMobService : MonoBehaviour, IAdService
 {
     private const float LoadRetryDelaySeconds = 30f;
+    private const string SettingsResourcePath = "SettingDatas/AdMobSettings";
 
     public static GoogleAdMobService Instance { get; private set; }
 
     [SerializeField] private AdMobSettings settings;
 
-    private InterstitialAd interstitialAd;
+    private RewardedAd rewardedAd;
     private Coroutine loadRetryCoroutine;
     private Action<bool> showCompleted;
+    private readonly Queue<Action> mainThreadActions = new Queue<Action>();
+    private readonly object mainThreadActionsLock = new object();
     private bool isInitializing;
+    private bool isMobileAdsInitializing;
     private bool isInitialized;
     private bool isLoading;
     private bool isShowing;
+    private bool hasEarnedReward;
+    private bool isDestroyed;
 
     private void Awake()
     {
@@ -33,12 +39,22 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
         DontDestroyOnLoad(gameObject);
 
         if (settings == null)
-            settings = Resources.Load<AdMobSettings>("AdMobSettings");
+            settings = Resources.Load<AdMobSettings>(SettingsResourcePath);
+
+        Debug.Log(settings == null
+            ? "[GoogleAdMobService] Awake completed. AdMobSettings is missing."
+            : "[GoogleAdMobService] Awake completed. AdMobSettings loaded.");
     }
 
     private void Start()
     {
+        Debug.Log("[GoogleAdMobService] Start. Requesting consent and ads initialization.");
         RequestConsentAndInitialize();
+    }
+
+    private void Update()
+    {
+        ExecuteQueuedMainThreadActions();
     }
 
     private void OnDestroy()
@@ -46,23 +62,24 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
         if (Instance != this)
             return;
 
+        isDestroyed = true;
         if (loadRetryCoroutine != null)
             StopCoroutine(loadRetryCoroutine);
+
+        ClearQueuedMainThreadActions();
 
         Action<bool> pendingShowCompleted = showCompleted;
         showCompleted = null;
         pendingShowCompleted?.Invoke(false);
 
-        DestroyInterstitialAd();
+        DestroyRewardedAd();
         Instance = null;
     }
 
     public bool IsReady(AdPlacement placement)
     {
-        return isInitialized &&
-               !isShowing &&
-               interstitialAd != null &&
-               interstitialAd.CanShowAd();
+        bool canShowAd = rewardedAd != null && rewardedAd.CanShowAd();
+        return isInitialized && !isShowing && canShowAd;
     }
 
     public void Show(AdPlacement placement, Action<bool> completed)
@@ -75,38 +92,68 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
 
         if (!IsReady(placement))
         {
-            Debug.LogWarning($"[GoogleAdMobService] Interstitial ad is not ready. placement={placement}");
-            LoadInterstitialAd();
+            bool hasRewardedAd = rewardedAd != null;
+            bool canShowAd = rewardedAd != null && rewardedAd.CanShowAd();
+            Debug.LogWarning(
+                $"[GoogleAdMobService] Rewarded ad is not ready. placement={placement}, " +
+                $"isInitialized={isInitialized}, isInitializing={isInitializing}, " +
+                $"isMobileAdsInitializing={isMobileAdsInitializing}, isLoading={isLoading}, " +
+                $"hasRewardedAd={hasRewardedAd}, canShowAd={canShowAd}");
+            LoadRewardedAd();
             completed?.Invoke(false);
             return;
         }
 
         isShowing = true;
+        hasEarnedReward = false;
         showCompleted = completed;
-        interstitialAd.Show();
+        rewardedAd.Show(reward =>
+        {
+            RunOnMainThread(() =>
+            {
+                hasEarnedReward = true;
+                Debug.Log($"[GoogleAdMobService] Reward earned. type={reward.Type}, amount={reward.Amount}");
+            });
+        });
     }
 
     private void RequestConsentAndInitialize()
     {
         if (isInitializing || isInitialized)
+        {
+            Debug.Log(
+                $"[GoogleAdMobService] Consent request skipped. isInitializing={isInitializing}, isInitialized={isInitialized}");
             return;
+        }
 
         isInitializing = true;
         ConsentRequestParameters requestParameters = new ConsentRequestParameters();
+        Debug.Log("[GoogleAdMobService] ConsentInformation.Update started.");
         ConsentInformation.Update(requestParameters, updateError =>
         {
             RunOnMainThread(() =>
             {
                 if (updateError != null)
                     Debug.LogWarning($"[GoogleAdMobService] Consent information update failed: {updateError.Message}");
+                else
+                    Debug.Log("[GoogleAdMobService] Consent information update completed.");
 
+                Debug.Log(
+                    $"[GoogleAdMobService] CanRequestAds after consent update: {ConsentInformation.CanRequestAds()}");
+                InitializeMobileAds();
+
+                Debug.Log("[GoogleAdMobService] ConsentForm.LoadAndShowConsentFormIfRequired started.");
                 ConsentForm.LoadAndShowConsentFormIfRequired(formError =>
                 {
                     RunOnMainThread(() =>
                     {
                         if (formError != null)
                             Debug.LogWarning($"[GoogleAdMobService] Consent form failed: {formError.Message}");
+                        else
+                            Debug.Log("[GoogleAdMobService] Consent form completed or was not required.");
 
+                        Debug.Log(
+                            $"[GoogleAdMobService] CanRequestAds after consent form: {ConsentInformation.CanRequestAds()}");
                         InitializeMobileAds();
                     });
                 });
@@ -116,8 +163,17 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
 
     private void InitializeMobileAds()
     {
-        if (isInitialized)
+        if (isMobileAdsInitializing)
+        {
+            Debug.Log("[GoogleAdMobService] Google Mobile Ads initialization is already in progress.");
             return;
+        }
+
+        if (isInitialized)
+        {
+            Debug.Log("[GoogleAdMobService] Google Mobile Ads initialization skipped because it is already initialized.");
+            return;
+        }
 
         if (!ConsentInformation.CanRequestAds())
         {
@@ -126,11 +182,14 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
             return;
         }
 
+        isMobileAdsInitializing = true;
+        Debug.Log("[GoogleAdMobService] Google Mobile Ads initialization started.");
         MobileAds.Initialize(initializationStatus =>
         {
             RunOnMainThread(() =>
             {
                 isInitializing = false;
+                isMobileAdsInitializing = false;
                 isInitialized = initializationStatus != null;
 
                 if (!isInitialized)
@@ -140,29 +199,45 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
                 }
 
                 Debug.Log("[GoogleAdMobService] Google Mobile Ads initialized.");
-                LoadInterstitialAd();
+                LoadRewardedAd();
             });
         });
     }
 
-    private void LoadInterstitialAd()
+    private void LoadRewardedAd()
     {
-        if (!isInitialized || isLoading || isShowing)
+        if (!isInitialized)
+        {
+            Debug.Log("[GoogleAdMobService] Rewarded load skipped because Mobile Ads is not initialized.");
             return;
+        }
 
-        string adUnitId = GetInterstitialAdUnitId();
+        if (isLoading)
+        {
+            Debug.Log("[GoogleAdMobService] Rewarded load skipped because a load is already in progress.");
+            return;
+        }
+
+        if (isShowing)
+        {
+            Debug.Log("[GoogleAdMobService] Rewarded load skipped because an ad is showing.");
+            return;
+        }
+
+        string adUnitId = GetRewardedAdUnitId();
         if (string.IsNullOrWhiteSpace(adUnitId))
         {
-            Debug.LogWarning("[GoogleAdMobService] Interstitial ad unit ID is unavailable.");
+            Debug.LogWarning("[GoogleAdMobService] Rewarded ad unit ID is unavailable.");
             return;
         }
 
         CancelLoadRetry();
-        DestroyInterstitialAd();
+        DestroyRewardedAd();
         isLoading = true;
 
+        Debug.Log($"[GoogleAdMobService] Rewarded ad load started. adUnitId={adUnitId}");
         AdRequest adRequest = new AdRequest();
-        InterstitialAd.Load(adUnitId, adRequest, (loadedAd, loadError) =>
+        RewardedAd.Load(adUnitId, adRequest, (loadedAd, loadError) =>
         {
             RunOnMainThread(() =>
             {
@@ -171,30 +246,31 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
                 if (loadError != null || loadedAd == null)
                 {
                     string errorMessage = loadError == null ? "Unknown load error" : loadError.ToString();
-                    Debug.LogWarning($"[GoogleAdMobService] Interstitial ad load failed: {errorMessage}");
+                    Debug.LogWarning($"[GoogleAdMobService] Rewarded ad load failed: {errorMessage}");
                     ScheduleLoadRetry();
                     return;
                 }
 
-                interstitialAd = loadedAd;
-                RegisterInterstitialEvents(interstitialAd);
-                Debug.Log("[GoogleAdMobService] Interstitial ad loaded.");
+                rewardedAd = loadedAd;
+                RegisterRewardedEvents(rewardedAd);
+                Debug.Log("[GoogleAdMobService] Rewarded ad loaded.");
             });
         });
     }
 
-    private void RegisterInterstitialEvents(InterstitialAd loadedAd)
+    private void RegisterRewardedEvents(RewardedAd loadedAd)
     {
         loadedAd.OnAdFullScreenContentClosed += () =>
         {
-            RunOnMainThread(() => CompleteShow(true));
+            Debug.Log("[GoogleAdMobService] Rewarded ad closed.");
+            RunOnMainThread(() => CompleteShow(hasEarnedReward));
         };
 
         loadedAd.OnAdFullScreenContentFailed += showError =>
         {
             RunOnMainThread(() =>
             {
-                Debug.LogWarning($"[GoogleAdMobService] Interstitial ad failed to show: {showError}");
+                Debug.LogWarning($"[GoogleAdMobService] Rewarded ad failed to show: {showError}");
                 CompleteShow(false);
             });
         };
@@ -206,18 +282,19 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
             return;
 
         isShowing = false;
+        hasEarnedReward = false;
         Action<bool> completed = showCompleted;
         showCompleted = null;
 
-        DestroyInterstitialAd();
-        LoadInterstitialAd();
+        DestroyRewardedAd();
+        LoadRewardedAd();
         completed?.Invoke(succeeded);
     }
 
-    private string GetInterstitialAdUnitId()
+    private string GetRewardedAdUnitId()
     {
         if (settings == null)
-            settings = Resources.Load<AdMobSettings>("AdMobSettings");
+            settings = Resources.Load<AdMobSettings>(SettingsResourcePath);
 
         if (settings == null)
         {
@@ -225,16 +302,16 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
             return string.Empty;
         }
 
-        return settings.GetAndroidInterstitialAdUnitId();
+        return settings.GetAndroidRewardedAdUnitId();
     }
 
-    private void DestroyInterstitialAd()
+    private void DestroyRewardedAd()
     {
-        if (interstitialAd == null)
+        if (rewardedAd == null)
             return;
 
-        interstitialAd.Destroy();
-        interstitialAd = null;
+        rewardedAd.Destroy();
+        rewardedAd = null;
     }
 
     private void ScheduleLoadRetry()
@@ -249,7 +326,7 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
     {
         yield return new WaitForSecondsRealtime(LoadRetryDelaySeconds);
         loadRetryCoroutine = null;
-        LoadInterstitialAd();
+        LoadRewardedAd();
     }
 
     private void CancelLoadRetry()
@@ -263,9 +340,37 @@ public class GoogleAdMobService : MonoBehaviour, IAdService
 
     private void RunOnMainThread(Action action)
     {
-        if (action == null)
+        if (action == null || isDestroyed)
             return;
 
-        MobileAdsEventExecutor.ExecuteInUpdate(action);
+        lock (mainThreadActionsLock)
+        {
+            mainThreadActions.Enqueue(action);
+        }
+    }
+
+    private void ExecuteQueuedMainThreadActions()
+    {
+        while (true)
+        {
+            Action action;
+            lock (mainThreadActionsLock)
+            {
+                if (mainThreadActions.Count <= 0)
+                    return;
+
+                action = mainThreadActions.Dequeue();
+            }
+
+            action?.Invoke();
+        }
+    }
+
+    private void ClearQueuedMainThreadActions()
+    {
+        lock (mainThreadActionsLock)
+        {
+            mainThreadActions.Clear();
+        }
     }
 }

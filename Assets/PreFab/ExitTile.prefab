@@ -83,7 +83,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -61986668366927319, guid: 064513e507063134d9fc9e29cbd66119, type: 3}
+  m_Sprite: {fileID: 6821353551706889206, guid: c44eea307ef84bb45aa6f16fbf3a00bb, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -107,6 +107,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ExitTile
   labelText: {fileID: 616102748161129641}
   condition: 0
+  freeExitSprite: {fileID: 6821353551706889206, guid: c44eea307ef84bb45aa6f16fbf3a00bb, type: 3}
+  oddExitSprite: {fileID: -2677216586428626032, guid: b8fe7aa67a3cd5f418f972e9bca17139, type: 3}
+  evenExitSprite: {fileID: 6034771511449908483, guid: 11b7710ec79fd9b4cb6331b4f9c01814, type: 3}
 --- !u!1 &7019673698266267947
 GameObject:
   m_ObjectHideFlags: 0

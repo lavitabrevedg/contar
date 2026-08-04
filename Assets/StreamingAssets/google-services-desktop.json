@@ -1,7 +1,7 @@
 {
   "project_info": {
     "project_number": "270446979152",
-    "firebase_url": "https://contar-11c00-default-rtdb.firebaseio.com/",
+    "firebase_url": "https://contar-11c00-default-rtdb.firebaseio.com",
     "project_id": "contar-11c00",
     "storage_bucket": "contar-11c00.firebasestorage.app"
   },
@@ -11,6 +11,25 @@
         "mobilesdk_app_id": "1:270446979152:android:731cc7cd18012e24218955",
         "android_client_info": {
           "package_name": "com.DKCompany.contar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4bplQXz31MqT-lQ8ERgK_7KvpLl7hQgY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:270446979152:android:7c313b9313abb548218955",
+        "android_client_info": {
+          "package_name": "com.peachtreestudio.contar"
         }
       },
       "oauth_client": [],

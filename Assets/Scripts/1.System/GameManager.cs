@@ -1,24 +1,27 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+    public bool IsHintRouteVisible => mapGenerator != null && mapGenerator.HasActiveHintRoute;
 
     [SerializeField] private MapGenerator mapGenerator;
     [SerializeField] private GameStateModel stateModel;
     [SerializeField] private StageProgressService progressService;
     [SerializeField] private AudioService audioService;
+    [SerializeField] private HapticService hapticService;
 
     private PlayerController player;
     private MoveResolver moveResolver;
+    private bool isInputBlocked;
 
     public int CurrentMoveCount => stateModel.MoveCount;
     public MapGenerator MapGenerator => mapGenerator;
     public GameState State => stateModel.State;
     public GameStateModel StateModel => stateModel;
     public StageProgressService ProgressService => progressService;
-    public StageClearProgressResult LastStageClearProgressResult { get; private set; }
     public int LastFailureCount { get; private set; }
 
     public event Action<int> StageCleared;
@@ -42,6 +45,7 @@ public class GameManager : MonoBehaviour
 
         ResolveProgressService();
         ResolveAudioService();
+        ResolveHapticService();
         moveResolver = new MoveResolver(mapGenerator);
     }
 
@@ -67,6 +71,7 @@ public class GameManager : MonoBehaviour
 
     public void OnSwipe(Vector2Int direction)
     {
+        if (isInputBlocked) return;
         if (State != GameState.Playing) return;
         if (player == null) return;
         if (player.IsMoving) return;
@@ -75,9 +80,12 @@ public class GameManager : MonoBehaviour
         MoveResult result = moveResolver.Resolve(player.GridPosition, direction, CurrentMoveCount);
         if (!result.isAllowed)
         {
-            NotifyMoveBlocked();
+            HandleBlockedMove(result);
             return;
         }
+
+        if (mapGenerator != null)
+            mapGenerator.StopHintRoute();
 
         stateModel.SpendMoveCount(result.moveCost);
 
@@ -120,16 +128,6 @@ public class GameManager : MonoBehaviour
         stateModel.AddMoveCount(delta);
     }
 
-    public bool ContinueWithBonusMoves(int bonusMoveCount)
-    {
-        if (State != GameState.Failed)
-            return false;
-
-        stateModel.ContinueWithBonusMoves(bonusMoveCount);
-        Debug.Log($"[GameManager] Continued with bonus moves. bonusMoveCount={bonusMoveCount}");
-        return true;
-    }
-
     public void RestartStage()
     {
         if (mapGenerator == null)
@@ -138,6 +136,8 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        mapGenerator.StopHintRoute();
+        isInputBlocked = false;
         mapGenerator.GenerateMap();
     }
 
@@ -155,7 +155,40 @@ public class GameManager : MonoBehaviour
         if (progressService != null)
             progressService.SetCurrentStage(stageIndex);
 
+        mapGenerator.StopHintRoute();
+        isInputBlocked = false;
         mapGenerator.SetMapData(mapData, true);
+    }
+
+    public bool TrySolveCurrentState(out PuzzleSolveResult solveResult)
+    {
+        solveResult = null;
+        if (player == null || mapGenerator == null || State != GameState.Playing || player.IsMoving)
+            return false;
+
+        PuzzleSnapshot puzzleSnapshot;
+        if (!mapGenerator.TryCreatePuzzleSnapshot(player.GridPosition, CurrentMoveCount, out puzzleSnapshot))
+            return false;
+
+        solveResult = PuzzleSolver.Solve(puzzleSnapshot);
+        return !solveResult.HasStructureError;
+    }
+
+    public void PlayHintRoute(IReadOnlyList<PuzzleRouteStep> route)
+    {
+        if (mapGenerator != null)
+            mapGenerator.PlayHintRoute(route);
+    }
+
+    public void StopHintRoute()
+    {
+        if (mapGenerator != null)
+            mapGenerator.StopHintRoute();
+    }
+
+    public void SetInputBlocked(bool shouldBlockInput)
+    {
+        isInputBlocked = shouldBlockInput;
     }
 
     public void NotifyStageCleared()
@@ -163,22 +196,16 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Playing) return;
 
         int stageIndex = GetCurrentStageIndex();
-        StageClearProgressResult progressResult = new StageClearProgressResult(false, false, 0);
-
         if (progressService != null)
-            progressResult = progressService.MarkStageCleared(stageIndex);
+            progressService.MarkStageCleared(stageIndex);
 
-        LastStageClearProgressResult = progressResult;
         stateModel.Clear();
         if (audioService != null)
             audioService.PlayClear();
 
         StageCleared?.Invoke(stageIndex);
 
-        if (progressResult.GrantedSkipTicket)
-            Debug.Log($"[GameManager] Stage cleared. stageIndex={stageIndex}, skipTickets={progressResult.SkipTicketCount}");
-        else
-            Debug.Log($"[GameManager] Stage cleared. stageIndex={stageIndex}");
+        Debug.Log($"[GameManager] Stage cleared. stageIndex={stageIndex}");
     }
 
     private void Fail()
@@ -200,6 +227,9 @@ public class GameManager : MonoBehaviour
     {
         if (audioService != null)
             audioService.PlayBlocked();
+
+        if (hapticService != null)
+            hapticService.PlayBlocked();
     }
 
     private void ResolveProgressService()
@@ -220,6 +250,15 @@ public class GameManager : MonoBehaviour
             audioService = FindFirstObjectByType<AudioService>();
     }
 
+    private void ResolveHapticService()
+    {
+        if (hapticService == null)
+            hapticService = FindFirstObjectByType<HapticService>();
+
+        if (hapticService == null)
+            hapticService = gameObject.AddComponent<HapticService>();
+    }
+
     private int GetCurrentStageIndex()
     {
         if (progressService == null)
@@ -235,5 +274,22 @@ public class GameManager : MonoBehaviour
     {
         if (audioService != null)
             audioService.PlayBlocked();
+
+        if (hapticService != null)
+            hapticService.PlayBlocked();
+    }
+
+    private void HandleBlockedMove(MoveResult result)
+    {
+        if (result.moveCost > 0)
+            stateModel.SpendMoveCount(result.moveCost);
+
+        if (result.shakesPushedObstacle && result.pushedObstacle != null)
+            result.pushedObstacle.PlayBlockedFeedback();
+
+        NotifyMoveBlocked();
+
+        if (State == GameState.Playing && CurrentMoveCount <= 0)
+            Fail();
     }
 }

@@ -80,6 +80,37 @@ public abstract class BaseTile : MonoBehaviour
             .SetEase(Ease.OutQuad);
     }
 
+    protected void ShowTileLabelFeedback(string text, Color color)
+    {
+        EnsureLabelText();
+
+        if (labelText == null)
+            return;
+
+        ConfigureLabelText();
+        labelText.transform.DOKill();
+        labelText.DOKill();
+
+        labelText.gameObject.SetActive(true);
+        labelText.text = text;
+        labelText.color = color;
+        labelText.alpha = 0f;
+        labelText.transform.localScale = Vector3.one * 0.85f;
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.Join(labelText.DOFade(1f, 0.08f));
+        sequence.Join(labelText.transform.DOScale(Vector3.one, 0.12f).SetEase(Ease.OutBack));
+        sequence.AppendInterval(0.46f);
+        sequence.Append(labelText.DOFade(0f, 0.12f));
+        sequence.OnComplete(() =>
+        {
+            labelText.text = string.Empty;
+            labelText.color = Color.black;
+            labelText.transform.localScale = Vector3.one;
+            labelText.gameObject.SetActive(false);
+        });
+    }
+
     private void EnsureLabelText()
     {
         if (labelText != null) return;

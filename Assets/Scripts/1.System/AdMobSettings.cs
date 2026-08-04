@@ -3,26 +3,29 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AdMobSettings", menuName = "contar/AdMob Settings")]
 public class AdMobSettings : ScriptableObject
 {
-    private const string AndroidTestInterstitialAdUnitId = "ca-app-pub-3940256099942544/1033173712";
+    private const string AndroidTestRewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917";
 
-    [SerializeField] private string androidInterstitialAdUnitId;
+    [SerializeField] private string androidRewardedAdUnitId;
     [SerializeField] private bool useTestAdsInDevelopmentBuild = true;
 
-    public string GetAndroidInterstitialAdUnitId()
+    public string GetAndroidRewardedAdUnitId()
     {
 #if UNITY_EDITOR
-        return AndroidTestInterstitialAdUnitId;
+        if (!useTestAdsInDevelopmentBuild)
+            Debug.LogWarning("[AdMobSettings] The Unity Editor always uses Google's rewarded test ad unit ID.");
+
+        return AndroidTestRewardedAdUnitId;
 #else
         if (Debug.isDebugBuild && useTestAdsInDevelopmentBuild)
-            return AndroidTestInterstitialAdUnitId;
+            return AndroidTestRewardedAdUnitId;
 
-        if (string.IsNullOrWhiteSpace(androidInterstitialAdUnitId))
+        if (string.IsNullOrWhiteSpace(androidRewardedAdUnitId))
         {
-            Debug.LogWarning("[AdMobSettings] Android interstitial ad unit ID is empty. Using the Google test ad unit ID.");
-            return AndroidTestInterstitialAdUnitId;
+            Debug.LogWarning("[AdMobSettings] Android rewarded ad unit ID is empty. Using the Google test ad unit ID.");
+            return AndroidTestRewardedAdUnitId;
         }
 
-        return androidInterstitialAdUnitId.Trim();
+        return androidRewardedAdUnitId.Trim();
 #endif
     }
 }

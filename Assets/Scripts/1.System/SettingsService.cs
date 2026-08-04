@@ -3,11 +3,15 @@ using UnityEngine;
 
 public class SettingsService : MonoBehaviour
 {
-    private const string SoundEnabledKey = "contar.settings.soundEnabled";
+    private const string SoundEffectEnabledKey = "contar.settings.soundEnabled";
+    private const string MusicEnabledKey = "contar.settings.musicEnabled";
+    private const string VibrationEnabledKey = "contar.settings.vibrationEnabled";
     private const int EnabledValue = 1;
     private const int DisabledValue = 0;
 
-    public bool IsSoundEnabled { get; private set; } = true;
+    public bool IsSoundEffectEnabled { get; private set; } = true;
+    public bool IsMusicEnabled { get; private set; } = true;
+    public bool IsVibrationEnabled { get; private set; } = true;
 
     public event Action SettingsChanged;
 
@@ -18,22 +22,44 @@ public class SettingsService : MonoBehaviour
 
     public void Load()
     {
-        IsSoundEnabled = PlayerPrefs.GetInt(SoundEnabledKey, EnabledValue) == EnabledValue;
+        IsSoundEffectEnabled = PlayerPrefs.GetInt(SoundEffectEnabledKey, EnabledValue) == EnabledValue;
+        IsMusicEnabled = PlayerPrefs.GetInt(MusicEnabledKey, EnabledValue) == EnabledValue;
+        IsVibrationEnabled = PlayerPrefs.GetInt(VibrationEnabledKey, EnabledValue) == EnabledValue;
         NotifySettingsChanged();
     }
 
-    public void SetSoundEnabled(bool isEnabled)
+    public void SetSoundEffectEnabled(bool isEnabled)
     {
-        if (IsSoundEnabled == isEnabled)
+        if (IsSoundEffectEnabled == isEnabled)
             return;
 
-        IsSoundEnabled = isEnabled;
+        IsSoundEffectEnabled = isEnabled;
+        Save();
+    }
+
+    public void SetMusicEnabled(bool isEnabled)
+    {
+        if (IsMusicEnabled == isEnabled)
+            return;
+
+        IsMusicEnabled = isEnabled;
+        Save();
+    }
+
+    public void SetVibrationEnabled(bool isEnabled)
+    {
+        if (IsVibrationEnabled == isEnabled)
+            return;
+
+        IsVibrationEnabled = isEnabled;
         Save();
     }
 
     private void Save()
     {
-        PlayerPrefs.SetInt(SoundEnabledKey, IsSoundEnabled ? EnabledValue : DisabledValue);
+        PlayerPrefs.SetInt(SoundEffectEnabledKey, IsSoundEffectEnabled ? EnabledValue : DisabledValue);
+        PlayerPrefs.SetInt(MusicEnabledKey, IsMusicEnabled ? EnabledValue : DisabledValue);
+        PlayerPrefs.SetInt(VibrationEnabledKey, IsVibrationEnabled ? EnabledValue : DisabledValue);
         PlayerPrefs.Save();
         NotifySettingsChanged();
     }

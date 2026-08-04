@@ -52,7 +52,8 @@
 - [ ] 광고 스킵권 증정 알림
 - [ ] 튜토리얼 UI 또는 초반 안내 방식 확정
 - [ ] 사운드 파일명 정리 및 실제 Sound Asset 재생 확인
-- [ ] BGM 적용 여부 결정
+- [ ] Lobby / InGame BGM 클립 할당 후 루프·크로스페이드·Music On/Off 확인
+- [ ] 새 힌트 이펙트 프리팹을 `InGameScene > _Systems > MapGenerator > Hint Effect Prefab`에 할당
 - [ ] 클리어 파티클/이펙트
 - [ ] 진동 피드백 연결
 - [ ] 앱 아이콘 / 스플래시 최종 적용

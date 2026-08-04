@@ -42,11 +42,15 @@ public class SettingsPresenter : MonoBehaviour
 
         view.OpenClicked -= OnOpenClicked;
         view.CloseClicked -= OnCloseClicked;
-        view.SoundClicked -= OnSoundClicked;
+        view.SoundEffectClicked -= OnSoundEffectClicked;
+        view.MusicClicked -= OnMusicClicked;
+        view.VibrationClicked -= OnVibrationClicked;
 
         view.OpenClicked += OnOpenClicked;
         view.CloseClicked += OnCloseClicked;
-        view.SoundClicked += OnSoundClicked;
+        view.SoundEffectClicked += OnSoundEffectClicked;
+        view.MusicClicked += OnMusicClicked;
+        view.VibrationClicked += OnVibrationClicked;
 
         if (settingsService != null)
         {
@@ -67,7 +71,9 @@ public class SettingsPresenter : MonoBehaviour
 
         view.OpenClicked -= OnOpenClicked;
         view.CloseClicked -= OnCloseClicked;
-        view.SoundClicked -= OnSoundClicked;
+        view.SoundEffectClicked -= OnSoundEffectClicked;
+        view.MusicClicked -= OnMusicClicked;
+        view.VibrationClicked -= OnVibrationClicked;
 
         if (settingsService != null)
             settingsService.SettingsChanged -= Refresh;
@@ -93,13 +99,39 @@ public class SettingsPresenter : MonoBehaviour
             view.SetPanelVisible(false);
     }
 
-    private void OnSoundClicked()
+    private void OnSoundEffectClicked()
     {
         ResolveReferences();
         if (settingsService == null)
             return;
 
-        settingsService.SetSoundEnabled(!settingsService.IsSoundEnabled);
+        settingsService.SetSoundEffectEnabled(!settingsService.IsSoundEffectEnabled);
+        if (audioService != null)
+            audioService.PlayUi();
+
+        Refresh();
+    }
+
+    private void OnMusicClicked()
+    {
+        ResolveReferences();
+        if (settingsService == null)
+            return;
+
+        settingsService.SetMusicEnabled(!settingsService.IsMusicEnabled);
+        if (audioService != null)
+            audioService.PlayUi();
+
+        Refresh();
+    }
+
+    private void OnVibrationClicked()
+    {
+        ResolveReferences();
+        if (settingsService == null)
+            return;
+
+        settingsService.SetVibrationEnabled(!settingsService.IsVibrationEnabled);
         if (audioService != null)
             audioService.PlayUi();
 
@@ -112,6 +144,8 @@ public class SettingsPresenter : MonoBehaviour
         if (view == null || settingsService == null)
             return;
 
-        view.SetSoundEnabled(settingsService.IsSoundEnabled);
+        view.SetSoundEffectEnabled(settingsService.IsSoundEffectEnabled);
+        view.SetMusicEnabled(settingsService.IsMusicEnabled);
+        view.SetVibrationEnabled(settingsService.IsVibrationEnabled);
     }
 }
