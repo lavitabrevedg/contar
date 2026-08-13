@@ -18,6 +18,15 @@ public class GameUIView : MonoBehaviour
     private const string ClearStageKey = "Text.ClearStage";
     private const string FailureStageKey = "Text.FailStage";
     private const string KoreanLocaleCode = "ko";
+    private const string TutorialPositiveMoveKey = "Tutorial.PositiveMoveTile";
+    private const string TutorialNegativeMoveKey = "Tutorial.NegativeMoveTile";
+    private const string TutorialExitOddKey = "Tutorial.ExitConditionOdd";
+    private const string TutorialExitEvenKey = "Tutorial.ExitConditionEven";
+    private const string TutorialNumberObstacleKey = "Tutorial.NumberObstacle";
+    private const float TutorialSafeMargin = 24f;
+    private const float TutorialPointerGap = 12f;
+    private const float TutorialFocusSize = 170f;
+    private static readonly Vector2 TutorialPanelSize = new Vector2(600f, 266f);
 
     [SerializeField] private TMP_Text moveCountText;
     [SerializeField] private TMP_Text stageText;
@@ -34,6 +43,15 @@ public class GameUIView : MonoBehaviour
     [SerializeField] private Button hintConfirmButton;
     [SerializeField] private Button hintCancelButton;
     [SerializeField] private TMP_Text hintCancelButtonText;
+    [SerializeField] private GameObject tutorialDialog;
+    [SerializeField] private TMP_Text tutorialMessageText;
+    [SerializeField] private Button tutorialAdvanceButton;
+    [SerializeField] private RectTransform tutorialPanelRect;
+    [SerializeField] private Image tutorialPanelImage;
+    [SerializeField] private RectTransform tutorialDimmerLeft;
+    [SerializeField] private RectTransform tutorialDimmerRight;
+    [SerializeField] private RectTransform tutorialDimmerTop;
+    [SerializeField] private RectTransform tutorialDimmerBottom;
     [SerializeField] private GameObject resultInputBlocker;
     [SerializeField] private float panelTweenDuration = 0.18f;
     [SerializeField] private Ease panelEase = Ease.OutBack;
@@ -42,14 +60,23 @@ public class GameUIView : MonoBehaviour
 
     private string lobbyButtonDefaultLabel;
     private TMP_Text lobbyButtonText;
+    private LocalizeStringEvent hintDialogTitleLocalizer;
+    private LocalizeStringEvent hintCancelButtonTextLocalizer;
+    private Vector2 hintCancelButtonDefaultAnchoredPosition;
     private float clearStageDefaultFontSize;
     private TMP_FontAsset clearStageDefaultFont;
+    private bool isHintCancelButtonPositionCached;
     private bool isNextStageAvailable;
     private bool isShowingClearResult;
+    private bool isDismissingResult;
+    private Transform tutorialTargetTransform;
     private readonly LocalizedString exitConditionLocalizedString = new LocalizedString(UiStringTableName, ExitConditionOddKey);
     private readonly LocalizedString clearStageLocalizedString = new LocalizedString(UiStringTableName, ClearStageKey);
     private readonly LocalizedString failureStageLocalizedString = new LocalizedString(UiStringTableName, FailureStageKey);
     private readonly LocalizedString movesLeftLocalizedString = new LocalizedString(UiStringTableName, MovesLeftKey);
+    private readonly LocalizedString tutorialMessageLocalizedString = new LocalizedString(
+        UiStringTableName,
+        TutorialPositiveMoveKey);
 
     public event Action RestartClicked;
     public event Action NextClicked;
@@ -57,16 +84,20 @@ public class GameUIView : MonoBehaviour
     public event Action HintClicked;
     public event Action HintConfirmed;
     public event Action HintCanceled;
+    public event Action TutorialAdvanced;
 
     private void Awake()
     {
         DisablePrimaryActionLocalizer();
+        CacheHintDialogLocalizers();
+        CacheHintCancelButtonPosition();
         CacheButtonLabels();
         CacheClearStageDefaults();
         exitConditionLocalizedString.StringChanged += UpdateExitConditionText;
         clearStageLocalizedString.StringChanged += UpdateClearStageText;
         failureStageLocalizedString.StringChanged += UpdateFailureStageText;
         movesLeftLocalizedString.StringChanged += UpdateMovesLeftText;
+        tutorialMessageLocalizedString.StringChanged += UpdateTutorialMessageText;
     }
 
     private void OnDestroy()
@@ -75,6 +106,13 @@ public class GameUIView : MonoBehaviour
         clearStageLocalizedString.StringChanged -= UpdateClearStageText;
         failureStageLocalizedString.StringChanged -= UpdateFailureStageText;
         movesLeftLocalizedString.StringChanged -= UpdateMovesLeftText;
+        tutorialMessageLocalizedString.StringChanged -= UpdateTutorialMessageText;
+    }
+
+    private void LateUpdate()
+    {
+        if (tutorialDialog != null && tutorialDialog.activeSelf && tutorialTargetTransform != null)
+            UpdateTutorialLayout();
     }
 
     private void OnEnable()
@@ -95,6 +133,9 @@ public class GameUIView : MonoBehaviour
 
         if (hintCancelButton != null)
             hintCancelButton.onClick.AddListener(NotifyHintCanceled);
+
+        if (tutorialAdvanceButton != null)
+            tutorialAdvanceButton.onClick.AddListener(NotifyTutorialAdvanced);
     }
 
     private void OnDisable()
@@ -114,7 +155,11 @@ public class GameUIView : MonoBehaviour
         if (hintCancelButton != null)
             hintCancelButton.onClick.RemoveListener(NotifyHintCanceled);
 
+        if (tutorialAdvanceButton != null)
+            tutorialAdvanceButton.onClick.RemoveListener(NotifyTutorialAdvanced);
+
         HideHintDialog();
+        HideTutorialDialog();
         KillResultPanelTweens();
     }
 
@@ -152,7 +197,7 @@ public class GameUIView : MonoBehaviour
     {
         isNextStageAvailable = isAvailable;
 
-        if (isShowingClearResult)
+        if (isShowingClearResult && !isDismissingResult)
             ConfigureClearPrimaryAction();
     }
 
@@ -179,6 +224,8 @@ public class GameUIView : MonoBehaviour
         if (hintDialog == null)
             return;
 
+        SetHintDialogLocalizersEnabled(true);
+
         if (hintDialogTitle != null)
             hintDialogTitle.text = "Watch Ad to Reveal Route";
 
@@ -188,6 +235,7 @@ public class GameUIView : MonoBehaviour
         if (hintCancelButtonText != null)
             hintCancelButtonText.text = "Cancel";
 
+        SetHintCancelButtonCentered(false);
         hintDialog.SetActive(true);
         hintDialog.transform.SetAsLastSibling();
     }
@@ -197,15 +245,18 @@ public class GameUIView : MonoBehaviour
         if (hintDialog == null)
             return;
 
+        SetHintDialogLocalizersEnabled(false);
+
         if (hintDialogTitle != null)
-            hintDialogTitle.text = message;
+            hintDialogTitle.text = GetHintMessageText(message);
 
         if (hintConfirmButton != null)
             hintConfirmButton.gameObject.SetActive(false);
 
         if (hintCancelButtonText != null)
-            hintCancelButtonText.text = "OK";
+            hintCancelButtonText.text = IsKoreanLocaleSelected() ? "확인" : "OK";
 
+        SetHintCancelButtonCentered(true);
         hintDialog.SetActive(true);
         hintDialog.transform.SetAsLastSibling();
     }
@@ -214,6 +265,228 @@ public class GameUIView : MonoBehaviour
     {
         if (hintDialog != null)
             hintDialog.SetActive(false);
+    }
+
+    public bool ShowTutorialStep(TutorialMessage tutorialMessage, Transform targetTransform)
+    {
+        if (tutorialDialog == null
+            || tutorialMessageText == null
+            || tutorialAdvanceButton == null
+            || tutorialPanelRect == null
+            || tutorialPanelImage == null
+            || targetTransform == null)
+        {
+            return false;
+        }
+
+        tutorialTargetTransform = targetTransform;
+        tutorialMessageLocalizedString.SetReference(UiStringTableName, GetTutorialMessageKey(tutorialMessage));
+        tutorialMessageLocalizedString.RefreshString();
+
+        tutorialDialog.SetActive(true);
+        tutorialDialog.transform.SetAsLastSibling();
+        if (UpdateTutorialLayout())
+            return true;
+
+        tutorialTargetTransform = null;
+        tutorialDialog.SetActive(false);
+        return false;
+    }
+
+    public void HideTutorialDialog()
+    {
+        tutorialTargetTransform = null;
+        if (tutorialDialog != null)
+            tutorialDialog.SetActive(false);
+    }
+
+    private void CacheHintDialogLocalizers()
+    {
+        hintDialogTitleLocalizer = hintDialogTitle == null
+            ? null
+            : hintDialogTitle.GetComponent<LocalizeStringEvent>();
+        hintCancelButtonTextLocalizer = hintCancelButtonText == null
+            ? null
+            : hintCancelButtonText.GetComponent<LocalizeStringEvent>();
+    }
+
+    private void CacheHintCancelButtonPosition()
+    {
+        if (hintCancelButton == null)
+            return;
+
+        RectTransform cancelButtonRectTransform = hintCancelButton.transform as RectTransform;
+        if (cancelButtonRectTransform == null)
+            return;
+
+        hintCancelButtonDefaultAnchoredPosition = cancelButtonRectTransform.anchoredPosition;
+        isHintCancelButtonPositionCached = true;
+    }
+
+    private void SetHintCancelButtonCentered(bool isCentered)
+    {
+        if (!isHintCancelButtonPositionCached)
+            CacheHintCancelButtonPosition();
+
+        if (hintCancelButton == null || !isHintCancelButtonPositionCached)
+            return;
+
+        RectTransform cancelButtonRectTransform = hintCancelButton.transform as RectTransform;
+        if (cancelButtonRectTransform == null)
+            return;
+
+        Vector2 targetPosition = hintCancelButtonDefaultAnchoredPosition;
+        if (isCentered)
+            targetPosition.x = 0f;
+
+        cancelButtonRectTransform.anchoredPosition = targetPosition;
+    }
+
+    private void SetHintDialogLocalizersEnabled(bool isEnabled)
+    {
+        if (hintDialogTitleLocalizer != null)
+            hintDialogTitleLocalizer.enabled = isEnabled;
+
+        if (hintCancelButtonTextLocalizer != null)
+            hintCancelButtonTextLocalizer.enabled = isEnabled;
+    }
+
+    private static string GetHintMessageText(string message)
+    {
+        if (!IsKoreanLocaleSelected())
+            return message;
+
+        switch (message)
+        {
+            case "Ad Not Completed":
+                return "광고 시청이 완료되지 않았습니다.";
+            case "Restart Recommended":
+                return "다시 시작을 권장합니다.";
+            default:
+                return message;
+        }
+    }
+
+    private static string GetTutorialMessageKey(TutorialMessage tutorialMessage)
+    {
+        switch (tutorialMessage)
+        {
+            case TutorialMessage.PositiveMoveTile:
+                return TutorialPositiveMoveKey;
+            case TutorialMessage.NegativeMoveTile:
+                return TutorialNegativeMoveKey;
+            case TutorialMessage.ExitConditionOdd:
+                return TutorialExitOddKey;
+            case TutorialMessage.ExitConditionEven:
+                return TutorialExitEvenKey;
+            case TutorialMessage.NumberObstacle:
+                return TutorialNumberObstacleKey;
+            default:
+                return TutorialPositiveMoveKey;
+        }
+    }
+
+    private bool UpdateTutorialLayout()
+    {
+        RectTransform tutorialDialogRect = tutorialDialog == null
+            ? null
+            : tutorialDialog.transform as RectTransform;
+        Camera worldCamera = Camera.main;
+        if (tutorialDialogRect == null || tutorialTargetTransform == null || worldCamera == null)
+            return false;
+
+        Canvas tutorialCanvas = tutorialDialog.GetComponentInParent<Canvas>();
+        Camera canvasCamera = tutorialCanvas != null && tutorialCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? tutorialCanvas.worldCamera
+            : null;
+        Vector3 targetScreenPosition = worldCamera.WorldToScreenPoint(tutorialTargetTransform.position);
+        if (targetScreenPosition.z < 0f)
+            return false;
+
+        Vector2 targetLocalPosition;
+        bool converted = RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            tutorialDialogRect,
+            targetScreenPosition,
+            canvasCamera,
+            out targetLocalPosition);
+        if (!converted)
+            return false;
+
+        tutorialPanelRect.sizeDelta = TutorialPanelSize;
+        TutorialPanelPlacement panelPlacement = TutorialPanelLayout.Calculate(
+            tutorialDialogRect.rect,
+            targetLocalPosition,
+            TutorialPanelSize,
+            TutorialSafeMargin,
+            TutorialPointerGap);
+        tutorialPanelRect.anchoredPosition = panelPlacement.Position;
+        tutorialPanelImage.rectTransform.localScale = panelPlacement.IsAboveTarget
+            ? Vector3.one
+            : new Vector3(1f, -1f, 1f);
+        UpdateTutorialDimmers(tutorialDialogRect.rect, targetLocalPosition);
+        return true;
+    }
+
+    private void UpdateTutorialDimmers(Rect dialogRect, Vector2 targetPosition)
+    {
+        float halfFocusSize = TutorialFocusSize * 0.5f;
+        float focusLeft = Mathf.Clamp(targetPosition.x - halfFocusSize, dialogRect.xMin, dialogRect.xMax);
+        float focusRight = Mathf.Clamp(targetPosition.x + halfFocusSize, dialogRect.xMin, dialogRect.xMax);
+        float focusBottom = Mathf.Clamp(targetPosition.y - halfFocusSize, dialogRect.yMin, dialogRect.yMax);
+        float focusTop = Mathf.Clamp(targetPosition.y + halfFocusSize, dialogRect.yMin, dialogRect.yMax);
+
+        SetTutorialDimmerBounds(
+            tutorialDimmerLeft,
+            dialogRect.xMin,
+            focusLeft,
+            dialogRect.yMin,
+            dialogRect.yMax);
+        SetTutorialDimmerBounds(
+            tutorialDimmerRight,
+            focusRight,
+            dialogRect.xMax,
+            dialogRect.yMin,
+            dialogRect.yMax);
+        SetTutorialDimmerBounds(
+            tutorialDimmerTop,
+            focusLeft,
+            focusRight,
+            focusTop,
+            dialogRect.yMax);
+        SetTutorialDimmerBounds(
+            tutorialDimmerBottom,
+            focusLeft,
+            focusRight,
+            dialogRect.yMin,
+            focusBottom);
+    }
+
+    private static void SetTutorialDimmerBounds(
+        RectTransform dimmerRect,
+        float left,
+        float right,
+        float bottom,
+        float top)
+    {
+        if (dimmerRect == null)
+            return;
+
+        float width = Mathf.Max(0f, right - left);
+        float height = Mathf.Max(0f, top - bottom);
+        dimmerRect.gameObject.SetActive(width > 0f && height > 0f);
+        dimmerRect.anchorMin = new Vector2(0.5f, 0.5f);
+        dimmerRect.anchorMax = new Vector2(0.5f, 0.5f);
+        dimmerRect.pivot = new Vector2(0.5f, 0.5f);
+        dimmerRect.anchoredPosition = new Vector2(
+            (left + right) * 0.5f,
+            (bottom + top) * 0.5f);
+        dimmerRect.sizeDelta = new Vector2(width, height);
+    }
+
+    private void UpdateTutorialMessageText(string localizedText)
+    {
+        if (tutorialMessageText != null)
+            tutorialMessageText.text = localizedText;
     }
 
     public void ShowClear()
@@ -232,6 +505,8 @@ public class GameUIView : MonoBehaviour
 
     public void HideResultPanels()
     {
+        isShowingClearResult = false;
+        isDismissingResult = false;
         HidePanel(clearPanel);
         SetResultInputBlockerVisible(false);
     }
@@ -239,6 +514,7 @@ public class GameUIView : MonoBehaviour
     private void SetClearModeObjects()
     {
         isShowingClearResult = true;
+        isDismissingResult = false;
 
         if (clearMoveText != null)
             clearMoveText.gameObject.SetActive(true);
@@ -257,6 +533,7 @@ public class GameUIView : MonoBehaviour
     private void SetFailModeObjects()
     {
         isShowingClearResult = false;
+        isDismissingResult = false;
 
         if (clearStageText != null)
         {
@@ -419,9 +696,19 @@ public class GameUIView : MonoBehaviour
     private void NotifyPrimaryActionClicked()
     {
         if (isShowingClearResult)
+        {
+            if (isDismissingResult)
+                return;
+
+            isDismissingResult = true;
+            if (primaryActionButton != null)
+                primaryActionButton.interactable = false;
+
             NextClicked?.Invoke();
-        else
-            RestartClicked?.Invoke();
+            return;
+        }
+
+        RestartClicked?.Invoke();
     }
 
     private void NotifyLobbyClicked()
@@ -442,6 +729,11 @@ public class GameUIView : MonoBehaviour
     private void NotifyHintCanceled()
     {
         HintCanceled?.Invoke();
+    }
+
+    private void NotifyTutorialAdvanced()
+    {
+        TutorialAdvanced?.Invoke();
     }
 
     private void ShowPanel(CanvasGroup panel)
@@ -520,4 +812,13 @@ public class GameUIView : MonoBehaviour
         clearPanel.DOKill();
         clearPanel.transform.DOKill();
     }
+}
+
+public enum TutorialMessage
+{
+    PositiveMoveTile,
+    NegativeMoveTile,
+    ExitConditionOdd,
+    ExitConditionEven,
+    NumberObstacle
 }

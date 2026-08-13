@@ -20,10 +20,12 @@ public class AudioService : MonoBehaviour
     [SerializeField] private AudioClip positiveMoveTileClip;
     [SerializeField] private AudioClip negativeMoveTileClip;
     [SerializeField] private AudioClip uiClip;
+    [SerializeField] private AudioClip mapRevealClip;
     [SerializeField, Range(0f, 3f)] private float sfxVolume = 1.8f;
     [SerializeField] private AudioClip backgroundMusicClip;
     [SerializeField, Range(0f, 1f)] private float backgroundMusicVolume = 0.35f;
     [SerializeField, Min(0f)] private float backgroundMusicCrossfadeDuration = 0.5f;
+    [SerializeField] private bool playBackgroundMusicOnStart = true;
 
     private AudioSource audioSource;
     private BackgroundMusicService backgroundMusicService;
@@ -38,6 +40,9 @@ public class AudioService : MonoBehaviour
         audioSource.spatialBlend = 0f;
         ResolveSettingsService();
         LoadMissingClips();
+
+        if (!playBackgroundMusicOnStart)
+            StopBackgroundMusicForMapReveal();
     }
 
     private void OnEnable()
@@ -47,7 +52,8 @@ public class AudioService : MonoBehaviour
 
     private void Start()
     {
-        RefreshBackgroundMusic();
+        if (playBackgroundMusicOnStart)
+            RefreshBackgroundMusic();
     }
 
     private void OnDisable()
@@ -89,6 +95,16 @@ public class AudioService : MonoBehaviour
     public void PlayUi()
     {
         Play(uiClip);
+    }
+
+    public void PlayMapReveal()
+    {
+        Play(mapRevealClip);
+    }
+
+    public void PlayBackgroundMusic()
+    {
+        RefreshBackgroundMusic();
     }
 
     private void Play(AudioClip clip)
@@ -141,6 +157,12 @@ public class AudioService : MonoBehaviour
                 backgroundMusicVolume,
                 backgroundMusicCrossfadeDuration);
         }
+    }
+
+    private void StopBackgroundMusicForMapReveal()
+    {
+        backgroundMusicService = BackgroundMusicService.GetOrCreate();
+        backgroundMusicService.StopCurrentMusic();
     }
 
     private void LoadMissingClips()

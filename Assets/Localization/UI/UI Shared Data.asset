@@ -85,6 +85,26 @@ MonoBehaviour:
     m_Key: button.BackSound
     m_Metadata:
       m_Items: []
+  - m_Id: 3000000000000001
+    m_Key: Tutorial.PositiveMoveTile
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000002
+    m_Key: Tutorial.NegativeMoveTile
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000003
+    m_Key: Tutorial.ExitConditionOdd
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000004
+    m_Key: Tutorial.ExitConditionEven
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000005
+    m_Key: Tutorial.NumberObstacle
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

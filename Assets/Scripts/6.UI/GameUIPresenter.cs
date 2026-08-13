@@ -17,6 +17,7 @@ public class GameUIPresenter : MonoBehaviour
     public event Action HintRequested;
     public event Action HintConfirmed;
     public event Action HintCanceled;
+    public event Action TutorialAdvanceRequested;
 
     private void Awake()
     {
@@ -75,6 +76,7 @@ public class GameUIPresenter : MonoBehaviour
             view.HintClicked += OnHintClicked;
             view.HintConfirmed += OnHintConfirmed;
             view.HintCanceled += OnHintCanceled;
+            view.TutorialAdvanced += OnTutorialAdvanced;
             isBound = true;
         }
 
@@ -105,6 +107,7 @@ public class GameUIPresenter : MonoBehaviour
             view.HintClicked -= OnHintClicked;
             view.HintConfirmed -= OnHintConfirmed;
             view.HintCanceled -= OnHintCanceled;
+            view.TutorialAdvanced -= OnTutorialAdvanced;
         }
 
         if (isProgressBound && progressService != null)
@@ -155,6 +158,17 @@ public class GameUIPresenter : MonoBehaviour
     {
         if (view != null)
             view.HideHintDialog();
+    }
+
+    public bool ShowTutorialStep(TutorialMessage tutorialMessage, Transform targetTransform)
+    {
+        return view != null && view.ShowTutorialStep(tutorialMessage, targetTransform);
+    }
+
+    public void HideTutorialDialog()
+    {
+        if (view != null)
+            view.HideTutorialDialog();
     }
 
     private ExitCondition GetCurrentExitCondition()
@@ -246,6 +260,11 @@ public class GameUIPresenter : MonoBehaviour
     private void OnHintCanceled()
     {
         HintCanceled?.Invoke();
+    }
+
+    private void OnTutorialAdvanced()
+    {
+        TutorialAdvanceRequested?.Invoke();
     }
 
     private void SetClearResultView()

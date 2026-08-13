@@ -106,6 +106,26 @@ MonoBehaviour:
     m_Localized: Music
     m_Metadata:
       m_Items: []
+  - m_Id: 3000000000000001
+    m_Localized: "+ Move Tile\nStep on it to gain the shown number of moves."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000002
+    m_Localized: "- Move Tile\nStep on it to lose the shown number of moves."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000003
+    m_Localized: "Exit Condition\nYou can exit only when the remaining moves are odd."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000004
+    m_Localized: "Exit Condition\nYou can exit only when the remaining moves are even."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3000000000000005
+    m_Localized: "Number Obstacle\nSpend the shown number of moves to push it."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds:

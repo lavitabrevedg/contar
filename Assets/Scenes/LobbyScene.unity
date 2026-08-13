@@ -2859,14 +2859,6 @@ PrefabInstance:
       value: 1300
       objectReference: {fileID: 0}
     - target: {fileID: 2804463041699770488, guid: 622ca8386b310304eb30e75e247fc7dd, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2804463041699770488, guid: 622ca8386b310304eb30e75e247fc7dd, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2804463041699770488, guid: 622ca8386b310304eb30e75e247fc7dd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -3174,7 +3166,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -3840,10 +3832,12 @@ MonoBehaviour:
   positiveMoveTileClip: {fileID: 8300000, guid: 7bd6b897eb5ca4b7d88a205c4a51640c, type: 3}
   negativeMoveTileClip: {fileID: 8300000, guid: 5fdb13d3756c84fecac96f5a2d124370, type: 3}
   uiClip: {fileID: 8300000, guid: 29bde6326b4c34ad8a12da475f79b50a, type: 3}
-  sfxVolume: 1.8
+  mapRevealClip: {fileID: 0}
+  sfxVolume: 2.5
   backgroundMusicClip: {fileID: 8300000, guid: ad403fe5cb1141c4db962f01954ad170, type: 3}
-  backgroundMusicVolume: 0.35
-  backgroundMusicCrossfadeDuration: 0.5
+  backgroundMusicVolume: 1
+  backgroundMusicCrossfadeDuration: 1.5
+  playBackgroundMusicOnStart: 1
 --- !u!114 &1337631748
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4600,8 +4594,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294572543
+  m_fontColor: {r: 1, g: 0.9764151, b: 0.9764151, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -5977,11 +5971,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyLogoAnimator
   logoTransform: {fileID: 1079184229}
-  introStartScale: 0.72
+  introStartScale: 0.9
   introOvershootScale: 1.06
   introGrowDuration: 0.39
   introSettleDuration: 0.16
-  floatingDistance: 12
+  floatingDistance: 30
   floatingCycleDuration: 3.2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

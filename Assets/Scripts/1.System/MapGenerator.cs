@@ -50,6 +50,7 @@ public class MapGenerator : MonoBehaviour
     private readonly Dictionary<Transform, Vector3> initialRevealScales = new Dictionary<Transform, Vector3>();
     private Transform generatedPlayerTransform;
     private Sequence initialRevealSequence;
+    private AudioService audioService;
 
     public bool HasActiveHintRoute => hintRouteCoroutine != null || activeHintEffects.Count > 0;
 
@@ -116,6 +117,8 @@ public class MapGenerator : MonoBehaviour
             completed?.Invoke();
             return;
         }
+
+        PlayMapRevealSound();
 
         for (int tileIndex = 0; tileIndex < tileTransforms.Count; tileIndex++)
             HideRevealTarget(tileTransforms[tileIndex]);
@@ -511,5 +514,14 @@ public class MapGenerator : MonoBehaviour
         target.DOKill();
         initialRevealScales[target] = target.localScale;
         target.localScale = Vector3.zero;
+    }
+
+    private void PlayMapRevealSound()
+    {
+        if (audioService == null)
+            audioService = FindFirstObjectByType<AudioService>();
+
+        if (audioService != null)
+            audioService.PlayMapReveal();
     }
 }

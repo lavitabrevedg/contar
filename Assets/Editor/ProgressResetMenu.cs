@@ -8,12 +8,14 @@ public static class ProgressResetMenu
     {
         bool confirmed = EditorUtility.DisplayDialog(
             "Reset Progress",
-            "Reset local progress to new user defaults?\n\nTickets: 3\nCleared stages: none\nStart stage: Stage 1\n\nFirebase upload will be requested if Firebase is ready.",
+            "Reset local progress to new user defaults?\n\nTickets: 3\nCleared stages: none\nStart stage: Stage 1\nTutorials: reset\n\nFirebase upload will be requested if Firebase is ready.",
             "Reset",
             "Cancel");
 
         if (!confirmed)
             return;
+
+        GameFlowController.ResetTutorialProgress();
 
         StageProgressService progressService = Object.FindFirstObjectByType<StageProgressService>();
         GameObject temporaryProgressObject = null;
@@ -24,7 +26,7 @@ public static class ProgressResetMenu
         }
 
         progressService.ResetToNewUserDefaults();
-        Debug.Log("[ProgressResetMenu] Progress reset to new user defaults. tickets=3, highestClearedStageIndex=-1, currentStageIndex=0");
+        Debug.Log("[ProgressResetMenu] Progress and tutorials reset to new user defaults. tickets=3, highestClearedStageIndex=-1, currentStageIndex=0");
 
         if (!Application.isPlaying)
         {

@@ -78,6 +78,12 @@ public class BackgroundMusicService : MonoBehaviour
         PlayRequestedMusic(crossfadeDuration);
     }
 
+    public void StopCurrentMusic()
+    {
+        StopAllMusic();
+        requestedClip = null;
+    }
+
     private void CreateSources()
     {
         firstSource = gameObject.AddComponent<AudioSource>();
