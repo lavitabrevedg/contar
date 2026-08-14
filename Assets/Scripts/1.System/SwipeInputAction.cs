@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,6 +11,8 @@ public class SwipeInputAction : MonoBehaviour
 
     private Vector2 startScreenPos;
     private bool isPressed;
+
+    public event Action<Vector2Int> SwipeDetected;
 
     private void OnEnable()
     {
@@ -56,6 +59,8 @@ public class SwipeInputAction : MonoBehaviour
             direction = delta.x > 0 ? Vector2Int.right : Vector2Int.left;
         else
             direction = delta.y > 0 ? Vector2Int.up : Vector2Int.down;
+
+        SwipeDetected?.Invoke(direction);
 
         if (GameManager.Instance == null) return;
         GameManager.Instance.OnSwipe(direction);

@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 public class GameFlowController : MonoBehaviour
 {
     private const float HintAvailabilityRefreshInterval = 0.5f;
+    private const int SwipeTutorialStageIndex = 0;
     private const int PositiveMoveAndExitTutorialStageIndex = 3;
     private const int NegativeMoveTutorialStageIndex = 4;
     private const int NumberObstacleTutorialStageIndex = 5;
@@ -12,9 +13,11 @@ public class GameFlowController : MonoBehaviour
     private const string NegativeMoveTutorialCompletedKey = "Tutorial.NegativeMove.Completed";
     private const string ExitConditionTutorialCompletedKey = "Tutorial.ExitCondition.Completed";
     private const string NumberObstacleTutorialCompletedKey = "Tutorial.NumberObstacle.Completed";
+    private const string SwipeTutorialCompletedKey = "Tutorial.Swipe.Completed";
 
     public static void ResetTutorialProgress()
     {
+        PlayerPrefs.DeleteKey(SwipeTutorialCompletedKey);
         PlayerPrefs.DeleteKey(PositiveMoveTutorialCompletedKey);
         PlayerPrefs.DeleteKey(NegativeMoveTutorialCompletedKey);
         PlayerPrefs.DeleteKey(ExitConditionTutorialCompletedKey);
@@ -27,6 +30,7 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private StageCatalog stageCatalog;
     [SerializeField] private StageProgressService progressService;
     [SerializeField] private GoogleAdMobService googleAdMobService;
+    [SerializeField] private SwipeInputAction swipeInputAction;
     [SerializeField] private bool useInspectorStageOnStart;
 
     private IAdService adService;
@@ -35,7 +39,10 @@ public class GameFlowController : MonoBehaviour
     private bool isBound;
     private bool isShowingAd;
     private bool isHintUnlocked;
+    private bool isHintInteractionActive;
     private bool isMapRevealPlaying;
+    private bool isSwipeTutorialActive;
+    private Vector2Int requiredSwipeDirection;
     private TutorialStep[] activeTutorialSteps;
     private int activeTutorialStepIndex;
     private int lastTutorialAdvanceFrame = -1;
@@ -72,6 +79,7 @@ public class GameFlowController : MonoBehaviour
     {
         Unbind();
         EndHintInteraction(false);
+        EndSwipeTutorial(false, false);
         EndTutorial(false);
     }
 
@@ -100,6 +108,9 @@ public class GameFlowController : MonoBehaviour
 
         if (audioService == null)
             audioService = FindFirstObjectByType<AudioService>();
+
+        if (swipeInputAction == null)
+            swipeInputAction = FindFirstObjectByType<SwipeInputAction>();
 
         ResolveAdService();
     }
@@ -143,6 +154,9 @@ public class GameFlowController : MonoBehaviour
         uiPresenter.HintConfirmed += OnHintConfirmed;
         uiPresenter.HintCanceled += OnHintCanceled;
         uiPresenter.TutorialAdvanceRequested += OnTutorialAdvanceRequested;
+        if (swipeInputAction != null)
+            swipeInputAction.SwipeDetected += OnSwipeDetected;
+
         isBound = true;
     }
 
@@ -158,11 +172,15 @@ public class GameFlowController : MonoBehaviour
         uiPresenter.HintConfirmed -= OnHintConfirmed;
         uiPresenter.HintCanceled -= OnHintCanceled;
         uiPresenter.TutorialAdvanceRequested -= OnTutorialAdvanceRequested;
+        if (swipeInputAction != null)
+            swipeInputAction.SwipeDetected -= OnSwipeDetected;
+
         isBound = false;
     }
 
     private void OnNextStageRequested()
     {
+        EndSwipeTutorial(false, false);
         ResetHintAttempt();
         bool stageLoaded = LoadNextStage();
         PlayMapReveal(stageLoaded);
@@ -176,6 +194,7 @@ public class GameFlowController : MonoBehaviour
         if (gameManager == null)
             return;
 
+        EndSwipeTutorial(false, false);
         ResetHintAttempt();
         gameManager.RestartStage();
         PlayMapReveal(true);
@@ -183,6 +202,7 @@ public class GameFlowController : MonoBehaviour
 
     private void OnLobbyRequested()
     {
+        EndSwipeTutorial(false, false);
         EndTutorial(false);
         ResetHintAttempt();
         SceneManager.LoadScene("LobbyScene");
@@ -208,14 +228,17 @@ public class GameFlowController : MonoBehaviour
         if (!solveResult.IsSolvable)
         {
             pendingHintResult = null;
+            isHintInteractionActive = true;
             gameManager.SetInputBlocked(true);
             uiPresenter.ShowHintMessage("Restart Recommended");
+            RefreshHintAvailability();
             return;
         }
 
         if (isHintUnlocked)
         {
             gameManager.PlayHintRoute(solveResult.Route);
+            RefreshHintAvailability();
             return;
         }
 
@@ -226,8 +249,10 @@ public class GameFlowController : MonoBehaviour
         }
 
         pendingHintResult = solveResult;
+        isHintInteractionActive = true;
         gameManager.SetInputBlocked(true);
         uiPresenter.ShowHintConfirmation();
+        RefreshHintAvailability();
     }
 
     private void OnHintConfirmed()
@@ -238,6 +263,7 @@ public class GameFlowController : MonoBehaviour
         if (adService == null || !adService.IsReady(AdPlacement.HintRoute))
         {
             pendingHintResult = null;
+            isHintInteractionActive = false;
             gameManager.SetInputBlocked(false);
             uiPresenter.HideHintDialog();
             RefreshHintAvailability();
@@ -257,6 +283,7 @@ public class GameFlowController : MonoBehaviour
 
         if (!rewardEarned)
         {
+            isHintInteractionActive = true;
             if (gameManager != null)
                 gameManager.SetInputBlocked(false);
 
@@ -265,6 +292,7 @@ public class GameFlowController : MonoBehaviour
             return;
         }
 
+        isHintInteractionActive = false;
         isHintUnlocked = true;
         if (gameManager != null)
             gameManager.SetInputBlocked(false);
@@ -300,6 +328,14 @@ public class GameFlowController : MonoBehaviour
         EndTutorial(true);
     }
 
+    private void OnSwipeDetected(Vector2Int direction)
+    {
+        if (!isSwipeTutorialActive || direction != requiredSwipeDirection)
+            return;
+
+        EndSwipeTutorial(true, true);
+    }
+
     private void RevealCurrentRoute()
     {
         if (gameManager == null)
@@ -308,8 +344,10 @@ public class GameFlowController : MonoBehaviour
         PuzzleSolveResult solveResult;
         if (!gameManager.TrySolveCurrentState(out solveResult) || !solveResult.IsSolvable)
         {
+            isHintInteractionActive = true;
             gameManager.SetInputBlocked(true);
             uiPresenter.ShowHintMessage("Restart Recommended");
+            RefreshHintAvailability();
             return;
         }
 
@@ -323,9 +361,14 @@ public class GameFlowController : MonoBehaviour
 
         bool isPlaying = gameManager != null && gameManager.State == GameState.Playing;
         bool adIsReady = adService != null && adService.IsReady(AdPlacement.HintRoute);
+        bool isHintRouteVisible = gameManager != null && gameManager.IsHintRouteVisible;
         bool isInteractable = isPlaying
             && !isShowingAd
             && !isMapRevealPlaying
+            && !isSwipeTutorialActive
+            && !isHintInteractionActive
+            && !isHintRouteVisible
+            && activeTutorialSteps == null
             && (isHintUnlocked || adIsReady);
         uiPresenter.SetHintButtonState(isPlaying, isInteractable);
     }
@@ -333,6 +376,7 @@ public class GameFlowController : MonoBehaviour
     private void EndHintInteraction(bool refreshAvailability)
     {
         pendingHintResult = null;
+        isHintInteractionActive = false;
         if (gameManager != null)
             gameManager.SetInputBlocked(false);
 
@@ -347,6 +391,7 @@ public class GameFlowController : MonoBehaviour
     {
         isHintUnlocked = false;
         isShowingAd = false;
+        isHintInteractionActive = false;
         pendingHintResult = null;
 
         if (gameManager != null)
@@ -416,8 +461,87 @@ public class GameFlowController : MonoBehaviour
             return false;
 
         int stageIndex = progressService.CurrentStageIndex;
+        if (stageIndex == SwipeTutorialStageIndex && TryStartSwipeTutorial())
+            return true;
+
         List<TutorialStep> tutorialSteps = BuildTutorialSteps(stageIndex);
         return StartTutorial(tutorialSteps);
+    }
+
+    private bool TryStartSwipeTutorial()
+    {
+        if (PlayerPrefs.GetInt(SwipeTutorialCompletedKey, 0) != 0)
+            return false;
+
+        MapGenerator mapGenerator = gameManager == null ? null : gameManager.MapGenerator;
+        MapData mapData = mapGenerator == null ? null : mapGenerator.mapData;
+        if (mapData == null)
+            return false;
+
+        Vector2Int startPosition;
+        if (!TryFindFirstTile(mapData, tileData => tileData.type == TileType.Start, out startPosition))
+        {
+            Debug.LogWarning("[GameFlowController] Swipe tutorial skipped because the start tile is missing.");
+            return false;
+        }
+
+        Vector2Int exitPosition;
+        if (!TryFindFirstTile(mapData, tileData => tileData.type == TileType.Exit, out exitPosition))
+        {
+            Debug.LogWarning("[GameFlowController] Swipe tutorial skipped because the exit tile is missing.");
+            return false;
+        }
+
+        Vector2Int exitDelta = exitPosition - startPosition;
+        requiredSwipeDirection = Mathf.Abs(exitDelta.x) >= Mathf.Abs(exitDelta.y)
+            ? new Vector2Int((int)Mathf.Sign(exitDelta.x), 0)
+            : new Vector2Int(0, (int)Mathf.Sign(exitDelta.y));
+        if (requiredSwipeDirection == Vector2Int.zero)
+        {
+            Debug.LogWarning("[GameFlowController] Swipe tutorial skipped because the start and exit overlap.");
+            return false;
+        }
+
+        Vector2Int targetPosition = startPosition + requiredSwipeDirection;
+        BaseTile startTile = mapGenerator.GetTile(startPosition.x, startPosition.y);
+        BaseTile targetTile = mapGenerator.GetTile(targetPosition.x, targetPosition.y);
+        if (startTile == null || targetTile == null)
+        {
+            Debug.LogWarning("[GameFlowController] Swipe tutorial target tiles are missing.");
+            return false;
+        }
+
+        gameManager.SetInputBlocked(true);
+        if (!uiPresenter.ShowSwipeTutorial(requiredSwipeDirection))
+        {
+            gameManager.SetInputBlocked(false);
+            return false;
+        }
+
+        isSwipeTutorialActive = true;
+        RefreshHintAvailability();
+        return true;
+    }
+
+    private void EndSwipeTutorial(bool markCompleted, bool refreshHintAvailability)
+    {
+        if (markCompleted)
+        {
+            PlayerPrefs.SetInt(SwipeTutorialCompletedKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        isSwipeTutorialActive = false;
+        requiredSwipeDirection = Vector2Int.zero;
+
+        if (uiPresenter != null)
+            uiPresenter.HideSwipeTutorial();
+
+        if (gameManager != null)
+            gameManager.SetInputBlocked(false);
+
+        if (refreshHintAvailability)
+            RefreshHintAvailability();
     }
 
     private List<TutorialStep> BuildTutorialSteps(int stageIndex)

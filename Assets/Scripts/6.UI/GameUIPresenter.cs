@@ -171,6 +171,17 @@ public class GameUIPresenter : MonoBehaviour
             view.HideTutorialDialog();
     }
 
+    public bool ShowSwipeTutorial(Vector2Int swipeDirection)
+    {
+        return view != null && view.ShowSwipeTutorial(swipeDirection);
+    }
+
+    public void HideSwipeTutorial()
+    {
+        if (view != null)
+            view.HideSwipeTutorial();
+    }
+
     private ExitCondition GetCurrentExitCondition()
     {
         GameManager gameManager = GameManager.Instance;

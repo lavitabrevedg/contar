@@ -105,6 +105,10 @@ MonoBehaviour:
     m_Key: Tutorial.NumberObstacle
     m_Metadata:
       m_Items: []
+  - m_Id: 3000000000000006
+    m_Key: Tutorial.Swipe
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

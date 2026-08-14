@@ -1,9 +1,12 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Audio;
 
 public class BackgroundMusicService : MonoBehaviour
 {
     private const string ServiceObjectName = "BackgroundMusicService";
+    private const string MusicMixerResourcePath = "Audio/MusicMixer";
+    private const string MusicMixerGroupName = "Music";
 
     private static BackgroundMusicService instance;
 
@@ -15,6 +18,7 @@ public class BackgroundMusicService : MonoBehaviour
     private float requestedVolume;
     private bool isMusicEnabled = true;
     private Coroutine crossfadeCoroutine;
+    private AudioMixerGroup musicMixerGroup;
 
     public static BackgroundMusicService GetOrCreate()
     {
@@ -86,6 +90,7 @@ public class BackgroundMusicService : MonoBehaviour
 
     private void CreateSources()
     {
+        ResolveMusicMixerGroup();
         firstSource = gameObject.AddComponent<AudioSource>();
         secondSource = gameObject.AddComponent<AudioSource>();
         ConfigureSource(firstSource);
@@ -100,6 +105,26 @@ public class BackgroundMusicService : MonoBehaviour
         source.loop = true;
         source.spatialBlend = 0f;
         source.volume = 0f;
+        source.outputAudioMixerGroup = musicMixerGroup;
+    }
+
+    private void ResolveMusicMixerGroup()
+    {
+        AudioMixer musicMixer = Resources.Load<AudioMixer>(MusicMixerResourcePath);
+        if (musicMixer == null)
+        {
+            Debug.LogWarning("[BackgroundMusicService] MusicMixer is missing. Music will use the default audio output.");
+            return;
+        }
+
+        AudioMixerGroup[] matchingGroups = musicMixer.FindMatchingGroups(MusicMixerGroupName);
+        if (matchingGroups == null || matchingGroups.Length == 0)
+        {
+            Debug.LogWarning("[BackgroundMusicService] Music mixer group is missing. Music will use the default audio output.");
+            return;
+        }
+
+        musicMixerGroup = matchingGroups[0];
     }
 
     private void PlayRequestedMusic()

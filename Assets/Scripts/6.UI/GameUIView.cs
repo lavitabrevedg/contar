@@ -23,9 +23,13 @@ public class GameUIView : MonoBehaviour
     private const string TutorialExitOddKey = "Tutorial.ExitConditionOdd";
     private const string TutorialExitEvenKey = "Tutorial.ExitConditionEven";
     private const string TutorialNumberObstacleKey = "Tutorial.NumberObstacle";
+    private const string TutorialSwipeKey = "Tutorial.Swipe";
     private const float TutorialSafeMargin = 24f;
     private const float TutorialPointerGap = 12f;
     private const float TutorialFocusSize = 170f;
+    private const float SwipeTutorialHandSize = 260f;
+    private const float SwipeTutorialTravelDistance = 600f;
+    private const float SwipeTutorialDragDuration = 0.75f;
     private static readonly Vector2 TutorialPanelSize = new Vector2(600f, 266f);
 
     [SerializeField] private TMP_Text moveCountText;
@@ -38,6 +42,7 @@ public class GameUIView : MonoBehaviour
     [SerializeField] private TMP_Text clearMoveText;
     [SerializeField] private Button lobbyButton;
     [SerializeField] private Button hintButton;
+    [SerializeField] private HintButtonParticleEffect hintButtonParticleEffect;
     [SerializeField] private GameObject hintDialog;
     [SerializeField] private TMP_Text hintDialogTitle;
     [SerializeField] private Button hintConfirmButton;
@@ -48,10 +53,10 @@ public class GameUIView : MonoBehaviour
     [SerializeField] private Button tutorialAdvanceButton;
     [SerializeField] private RectTransform tutorialPanelRect;
     [SerializeField] private Image tutorialPanelImage;
-    [SerializeField] private RectTransform tutorialDimmerLeft;
-    [SerializeField] private RectTransform tutorialDimmerRight;
-    [SerializeField] private RectTransform tutorialDimmerTop;
-    [SerializeField] private RectTransform tutorialDimmerBottom;
+    [SerializeField] private TutorialSpotlightGraphic tutorialSpotlight;
+    [SerializeField] private GameObject swipeTutorial;
+    [SerializeField] private Image swipeTutorialHandImage;
+    [SerializeField] private TMP_Text swipeTutorialText;
     [SerializeField] private GameObject resultInputBlocker;
     [SerializeField] private float panelTweenDuration = 0.18f;
     [SerializeField] private Ease panelEase = Ease.OutBack;
@@ -70,6 +75,7 @@ public class GameUIView : MonoBehaviour
     private bool isShowingClearResult;
     private bool isDismissingResult;
     private Transform tutorialTargetTransform;
+    private Sequence swipeTutorialSequence;
     private readonly LocalizedString exitConditionLocalizedString = new LocalizedString(UiStringTableName, ExitConditionOddKey);
     private readonly LocalizedString clearStageLocalizedString = new LocalizedString(UiStringTableName, ClearStageKey);
     private readonly LocalizedString failureStageLocalizedString = new LocalizedString(UiStringTableName, FailureStageKey);
@@ -77,6 +83,9 @@ public class GameUIView : MonoBehaviour
     private readonly LocalizedString tutorialMessageLocalizedString = new LocalizedString(
         UiStringTableName,
         TutorialPositiveMoveKey);
+    private readonly LocalizedString swipeTutorialLocalizedString = new LocalizedString(
+        UiStringTableName,
+        TutorialSwipeKey);
 
     public event Action RestartClicked;
     public event Action NextClicked;
@@ -98,6 +107,7 @@ public class GameUIView : MonoBehaviour
         failureStageLocalizedString.StringChanged += UpdateFailureStageText;
         movesLeftLocalizedString.StringChanged += UpdateMovesLeftText;
         tutorialMessageLocalizedString.StringChanged += UpdateTutorialMessageText;
+        swipeTutorialLocalizedString.StringChanged += UpdateSwipeTutorialText;
     }
 
     private void OnDestroy()
@@ -107,6 +117,8 @@ public class GameUIView : MonoBehaviour
         failureStageLocalizedString.StringChanged -= UpdateFailureStageText;
         movesLeftLocalizedString.StringChanged -= UpdateMovesLeftText;
         tutorialMessageLocalizedString.StringChanged -= UpdateTutorialMessageText;
+        swipeTutorialLocalizedString.StringChanged -= UpdateSwipeTutorialText;
+        KillSwipeTutorialSequence();
     }
 
     private void LateUpdate()
@@ -160,6 +172,7 @@ public class GameUIView : MonoBehaviour
 
         HideHintDialog();
         HideTutorialDialog();
+        HideSwipeTutorial();
         KillResultPanelTweens();
     }
 
@@ -217,6 +230,8 @@ public class GameUIView : MonoBehaviour
 
         hintButton.gameObject.SetActive(isVisible);
         hintButton.interactable = isVisible && isInteractable;
+        if (hintButtonParticleEffect != null)
+            hintButtonParticleEffect.SetPlaying(isVisible && isInteractable);
     }
 
     public void ShowHintConfirmation()
@@ -274,6 +289,7 @@ public class GameUIView : MonoBehaviour
             || tutorialAdvanceButton == null
             || tutorialPanelRect == null
             || tutorialPanelImage == null
+            || tutorialSpotlight == null
             || targetTransform == null)
         {
             return false;
@@ -296,8 +312,66 @@ public class GameUIView : MonoBehaviour
     public void HideTutorialDialog()
     {
         tutorialTargetTransform = null;
+        if (tutorialSpotlight != null)
+            tutorialSpotlight.ClearFocus();
+
         if (tutorialDialog != null)
             tutorialDialog.SetActive(false);
+    }
+
+    public bool ShowSwipeTutorial(Vector2Int swipeDirection)
+    {
+        if (swipeTutorial == null
+            || swipeTutorialHandImage == null
+            || swipeTutorialText == null
+            || swipeDirection == Vector2Int.zero)
+        {
+            return false;
+        }
+
+        RectTransform swipeTutorialRect = swipeTutorial.transform as RectTransform;
+        if (swipeTutorialRect == null)
+            return false;
+
+        Vector2 direction = new Vector2(swipeDirection.x, swipeDirection.y).normalized;
+        Vector2 gestureCenter = new Vector2(0f, 80f);
+        float halfTravelDistance = SwipeTutorialTravelDistance * 0.5f;
+        Vector2 startLocalPosition = gestureCenter - direction * halfTravelDistance;
+        Vector2 targetLocalPosition = gestureCenter + direction * halfTravelDistance;
+        Vector2 pressOffset = new Vector2(0f, -10f);
+        RectTransform handRect = swipeTutorialHandImage.rectTransform;
+        KillSwipeTutorialSequence();
+        swipeTutorial.SetActive(true);
+        swipeTutorial.transform.SetAsLastSibling();
+        handRect.sizeDelta = Vector2.one * SwipeTutorialHandSize;
+        handRect.anchoredPosition = startLocalPosition;
+        handRect.localScale = Vector3.one;
+        Color handColor = swipeTutorialHandImage.color;
+        handColor.a = 0f;
+        swipeTutorialHandImage.color = handColor;
+        swipeTutorialLocalizedString.RefreshString();
+
+        swipeTutorialSequence = DOTween.Sequence();
+        swipeTutorialSequence.Append(swipeTutorialHandImage.DOFade(1f, 0.15f));
+        swipeTutorialSequence.Append(handRect.DOScale(0.88f, 0.12f).SetEase(Ease.OutQuad));
+        swipeTutorialSequence.Join(handRect.DOAnchorPos(startLocalPosition + pressOffset, 0.12f));
+        swipeTutorialSequence.Append(
+            handRect.DOAnchorPos(targetLocalPosition + pressOffset, SwipeTutorialDragDuration)
+                .SetEase(Ease.InOutSine));
+        swipeTutorialSequence.Append(handRect.DOScale(1f, 0.12f).SetEase(Ease.OutBack));
+        swipeTutorialSequence.Join(handRect.DOAnchorPos(targetLocalPosition, 0.12f));
+        swipeTutorialSequence.Append(swipeTutorialHandImage.DOFade(0f, 0.18f));
+        swipeTutorialSequence.AppendInterval(0.35f);
+        swipeTutorialSequence.SetLoops(-1, LoopType.Restart);
+        swipeTutorialSequence.SetUpdate(true);
+        return true;
+    }
+
+    public void HideSwipeTutorial()
+    {
+        KillSwipeTutorialSequence();
+        if (swipeTutorial != null)
+            swipeTutorial.SetActive(false);
     }
 
     private void CacheHintDialogLocalizers()
@@ -423,70 +497,42 @@ public class GameUIView : MonoBehaviour
         tutorialPanelImage.rectTransform.localScale = panelPlacement.IsAboveTarget
             ? Vector3.one
             : new Vector3(1f, -1f, 1f);
-        UpdateTutorialDimmers(tutorialDialogRect.rect, targetLocalPosition);
+        UpdateTutorialSpotlight(targetLocalPosition);
         return true;
     }
 
-    private void UpdateTutorialDimmers(Rect dialogRect, Vector2 targetPosition)
+    private void UpdateTutorialSpotlight(Vector2 targetPosition)
     {
         float halfFocusSize = TutorialFocusSize * 0.5f;
-        float focusLeft = Mathf.Clamp(targetPosition.x - halfFocusSize, dialogRect.xMin, dialogRect.xMax);
-        float focusRight = Mathf.Clamp(targetPosition.x + halfFocusSize, dialogRect.xMin, dialogRect.xMax);
-        float focusBottom = Mathf.Clamp(targetPosition.y - halfFocusSize, dialogRect.yMin, dialogRect.yMax);
-        float focusTop = Mathf.Clamp(targetPosition.y + halfFocusSize, dialogRect.yMin, dialogRect.yMax);
-
-        SetTutorialDimmerBounds(
-            tutorialDimmerLeft,
-            dialogRect.xMin,
-            focusLeft,
-            dialogRect.yMin,
-            dialogRect.yMax);
-        SetTutorialDimmerBounds(
-            tutorialDimmerRight,
-            focusRight,
-            dialogRect.xMax,
-            dialogRect.yMin,
-            dialogRect.yMax);
-        SetTutorialDimmerBounds(
-            tutorialDimmerTop,
-            focusLeft,
-            focusRight,
-            focusTop,
-            dialogRect.yMax);
-        SetTutorialDimmerBounds(
-            tutorialDimmerBottom,
-            focusLeft,
-            focusRight,
-            dialogRect.yMin,
-            focusBottom);
-    }
-
-    private static void SetTutorialDimmerBounds(
-        RectTransform dimmerRect,
-        float left,
-        float right,
-        float bottom,
-        float top)
-    {
-        if (dimmerRect == null)
+        if (tutorialSpotlight == null)
             return;
 
-        float width = Mathf.Max(0f, right - left);
-        float height = Mathf.Max(0f, top - bottom);
-        dimmerRect.gameObject.SetActive(width > 0f && height > 0f);
-        dimmerRect.anchorMin = new Vector2(0.5f, 0.5f);
-        dimmerRect.anchorMax = new Vector2(0.5f, 0.5f);
-        dimmerRect.pivot = new Vector2(0.5f, 0.5f);
-        dimmerRect.anchoredPosition = new Vector2(
-            (left + right) * 0.5f,
-            (bottom + top) * 0.5f);
-        dimmerRect.sizeDelta = new Vector2(width, height);
+        tutorialSpotlight.SetFocus(new Rect(
+            targetPosition.x - halfFocusSize,
+            targetPosition.y - halfFocusSize,
+            TutorialFocusSize,
+            TutorialFocusSize));
     }
 
     private void UpdateTutorialMessageText(string localizedText)
     {
         if (tutorialMessageText != null)
             tutorialMessageText.text = localizedText;
+    }
+
+    private void UpdateSwipeTutorialText(string localizedText)
+    {
+        if (swipeTutorialText != null)
+            swipeTutorialText.text = localizedText;
+    }
+
+    private void KillSwipeTutorialSequence()
+    {
+        if (swipeTutorialSequence == null)
+            return;
+
+        swipeTutorialSequence.Kill();
+        swipeTutorialSequence = null;
     }
 
     public void ShowClear()

@@ -35,7 +35,7 @@ public class MapGenerator : MonoBehaviour
     [Header("Hint Route")]
     [SerializeField] private float hintStepInterval = 0.18f;
     [SerializeField] private GameObject hintEffectPrefab;
-    [SerializeField] private float hintEffectScale = 0.1f;
+    [SerializeField] private float hintEffectScale = 1f;
     [SerializeField] private int hintEffectSortingOrder = 15;
 
     [Header("Initial Map Reveal")]
@@ -360,19 +360,36 @@ public class MapGenerator : MonoBehaviour
             if (tile == null)
                 continue;
 
-            PlayHintEffect(tile.transform.position);
+            Vector2Int hintDirection = GetHintDirection(route[stepIndex]);
+            PlayHintEffect(tile.transform.position, hintDirection);
             yield return stepWait;
         }
 
         hintRouteCoroutine = null;
     }
 
-    private void PlayHintEffect(Vector3 worldPosition)
+    private static Vector2Int GetHintDirection(PuzzleRouteStep routeStep)
+    {
+        Vector2Int hintDirection = routeStep.Direction;
+        if (hintDirection == Vector2Int.right
+            || hintDirection == Vector2Int.left
+            || hintDirection == Vector2Int.up
+            || hintDirection == Vector2Int.down)
+        {
+            return hintDirection;
+        }
+
+        return Vector2Int.right;
+    }
+
+    private void PlayHintEffect(Vector3 worldPosition, Vector2Int hintDirection)
     {
         if (hintEffectPrefab == null)
             return;
 
-        GameObject hintEffect = Instantiate(hintEffectPrefab, worldPosition, Quaternion.identity);
+        float directionAngle = Mathf.Atan2(hintDirection.y, hintDirection.x) * Mathf.Rad2Deg;
+        Quaternion effectRotation = Quaternion.Euler(0f, 0f, directionAngle);
+        GameObject hintEffect = Instantiate(hintEffectPrefab, worldPosition, effectRotation);
         hintEffect.transform.localScale = Vector3.one * Mathf.Max(0.01f, hintEffectScale);
 
         ParticleSystemRenderer[] particleRenderers = hintEffect.GetComponentsInChildren<ParticleSystemRenderer>(true);
